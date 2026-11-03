@@ -55,9 +55,19 @@ public class Listeners implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onMoveEvent(PlayerMoveEvent event) {
+        Location from = event.getFrom();
         Location to = event.getTo();
-        coreListeners.playerMove(new FoliaPlayerContainer(event.getPlayer()),
-                                 ContainerHelpers.toPlayerLocation(to));
+        // Turning the camera fires this event as often as walking does. It
+        // can't move the player into or out of a portal so skip it.
+        if (to == null
+            || (from.getX() == to.getX() && from.getY() == to.getY()
+                && from.getZ() == to.getZ())) {
+            return;
+        }
+        coreListeners.playerMove(
+            new FoliaPlayerContainer(event.getPlayer()),
+            ContainerHelpers.toPlayerLocation(from),
+            ContainerHelpers.toPlayerLocation(to));
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -219,15 +229,13 @@ public class Listeners implements Listener {
         if (!configRepository.getPortalProtection())
             return;
 
-        List<Block> blockList = event.blockList();
-        for (int i = 0; i < blockList.size(); i++) {
-            Block block = blockList.get(i);
-            if (portalServices.inPortalRegionProtected(
-                    ContainerHelpers.toBlockLocation(block.getLocation()))) {
-                blockList.remove(i);
-                i--;
-            }
-        }
+        // removeIf is a single pass, the old index based remove was O(n^2) on
+        // big explosions
+        event.blockList().removeIf(
+            block
+            -> portalServices.inPortalRegionProtected(
+                block.getWorld().getName(), block.getX(), block.getY(),
+                block.getZ()));
     }
 
     @EventHandler
@@ -236,11 +244,21 @@ public class Listeners implements Listener {
             return;
         }
         Chunk chunk = event.getChunk();
-        List<AdvancedPortal> checkPortals = portalServices.getPortals()
-                .stream().filter(portal -> portal.isTriggerBlock(Material.END_GATEWAY.toString()))
-                .filter(portal -> portal.isChunkOverlapping(chunk.getX(), chunk.getZ())).collect(Collectors.toList());
+        // The index only returns the portals in this exact chunk of this
+        // world, so there is no need to look at every portal on the server
+        // every time a chunk loads.
+        boolean hasGatewayPortal = false;
+        for (AdvancedPortal portal :
+             portalServices.getIndex().inChunkOf(chunk.getWorld().getName(),
+                                                 chunk.getX() << 4,
+                                                 chunk.getZ() << 4)) {
+            if (portal.isTriggerBlock(Material.END_GATEWAY.toString())) {
+                hasGatewayPortal = true;
+                break;
+            }
+        }
 
-        if(checkPortals.isEmpty()) {
+        if (!hasGatewayPortal) {
             return;
         }
 

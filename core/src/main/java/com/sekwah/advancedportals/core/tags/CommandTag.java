@@ -150,74 +150,95 @@ public class CommandTag implements Tag.Activation, Tag.Split, Tag.Creation {
     @Override
     public boolean created(TagTarget target, PlayerContainer player,
                            String[] argData) {
-        if (argData != null) {
-            com.sekwah.advancedportals.core.serializeddata.config
-                .CommandPortalConfig commandPortals =
-                configRepository.getCommandPortals();
-            if (!commandPortals.enabled) {
-                player.sendMessage(Lang.getNegativePrefix()
-                                   + Lang.translate("tag.command.disabled"));
+        if (argData == null || argData.length == 0) {
+            return false;
+        }
+        com.sekwah.advancedportals.core.serializeddata.config
+            .CommandPortalConfig commandPortals =
+            configRepository.getCommandPortals();
+        if (!commandPortals.enabled) {
+            sendToPlayer(player, Lang.getNegativePrefix()
+                                     + Lang.translate("tag.command.disabled"));
+            return false;
+        }
+        // Every command has to be checked. This used to return after the first
+        // command so anyone who could create command portals could put a plain
+        // command first to sneak op/console/wildcard commands past the
+        // permission checks.
+        for (String command : argData) {
+            if (command == null || command.isEmpty()) {
                 return false;
             }
-            for (String command : argData) {
-                char executionCommand = command.charAt(0);
-                switch (executionCommand) {
-                    case '!':
-                        if (!commandPortals.op) {
-                            player.sendMessage(
-                                Lang.getNegativePrefix()
-                                + Lang.translate("tag.command.op.disabled"));
-                            return false;
-                        }
-                        if (!Permissions.CREATE_COMMAND_OP.hasPermission(
-                                player)) {
-                            player.sendMessage(
-                                Lang.getNegativePrefix()
-                                + Lang.translateInsertVariables(
-                                    "tag.command.nopermission", "OP"));
-                            return false;
-                        }
-                        return true;
-                    case '#':
-                        if (!commandPortals.console) {
-                            player.sendMessage(
-                                Lang.getNegativePrefix()
-                                + Lang.translate(
-                                    "tag.command.console.disabled"));
-                            return false;
-                        }
-                        if (!Permissions.CREATE_COMMAND_CONSOLE.hasPermission(
-                                player)) {
-                            player.sendMessage(
-                                Lang.getNegativePrefix()
-                                + Lang.translateInsertVariables(
-                                    "tag.command.nopermission", "Console"));
-                            return false;
-                        }
-                        return true;
-                    case '^':
-                        if (!commandPortals.permsWildcard) {
-                            player.sendMessage(
-                                Lang.getNegativePrefix()
+            switch (command.charAt(0)) {
+                case '!':
+                    if (!commandPortals.op) {
+                        sendToPlayer(player,
+                                     Lang.getNegativePrefix()
+                                         + Lang.translate(
+                                             "tag.command.op.disabled"));
+                        return false;
+                    }
+                    if (player != null
+                        && !Permissions.CREATE_COMMAND_OP.hasPermission(
+                            player)) {
+                        sendToPlayer(player,
+                                     Lang.getNegativePrefix()
+                                         + Lang.translateInsertVariables(
+                                             "tag.command.nopermission",
+                                             "OP"));
+                        return false;
+                    }
+                    break;
+                case '#':
+                    if (!commandPortals.console) {
+                        sendToPlayer(player,
+                                     Lang.getNegativePrefix()
+                                         + Lang.translate(
+                                             "tag.command.console.disabled"));
+                        return false;
+                    }
+                    if (player != null
+                        && !Permissions.CREATE_COMMAND_CONSOLE.hasPermission(
+                            player)) {
+                        sendToPlayer(player,
+                                     Lang.getNegativePrefix()
+                                         + Lang.translateInsertVariables(
+                                             "tag.command.nopermission",
+                                             "Console"));
+                        return false;
+                    }
+                    break;
+                case '^':
+                    if (!commandPortals.permsWildcard) {
+                        sendToPlayer(
+                            player,
+                            Lang.getNegativePrefix()
                                 + Lang.translate(
                                     "tag.command.permswildcard.disabled"));
-                            return false;
-                        }
-                        if (!Permissions.CREATE_COMMAND_PERMS.hasPermission(
-                                player)) {
-                            player.sendMessage(
-                                Lang.getNegativePrefix()
-                                + Lang.translateInsertVariables(
-                                    "tag.command.nopermission", "*"));
-                            return false;
-                        }
-                        return true;
-                    default:
-                        return true;
-                }
+                        return false;
+                    }
+                    if (player != null
+                        && !Permissions.CREATE_COMMAND_PERMS.hasPermission(
+                            player)) {
+                        sendToPlayer(player,
+                                     Lang.getNegativePrefix()
+                                         + Lang.translateInsertVariables(
+                                             "tag.command.nopermission",
+                                             "*"));
+                        return false;
+                    }
+                    break;
+                default:
+                    break;
             }
         }
-        return false;
+        return true;
+    }
+
+    private static void sendToPlayer(PlayerContainer player, String message) {
+        if (player != null) {
+            player.sendMessage(message);
+        }
     }
 
     @Override

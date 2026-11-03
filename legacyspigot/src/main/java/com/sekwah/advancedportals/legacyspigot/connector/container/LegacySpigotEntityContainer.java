@@ -9,6 +9,7 @@ import com.sekwah.advancedportals.core.serializeddata.Vector;
 import com.sekwah.advancedportals.shadowed.inject.Inject;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.entity.Entity;
 
 /**
@@ -47,9 +48,14 @@ public class LegacySpigotEntityContainer implements EntityContainer {
 
     @Override
     public boolean teleport(PlayerLocation location) {
+        World world = Bukkit.getWorld(location.getWorldName());
+        if (world == null) {
+            return false;
+        }
+        // Keep the facing of the destination for every kind of entity
         return this.entity.teleport(new Location(
-            Bukkit.getWorld(location.getWorldName()), location.getPosX(),
-            location.getPosY(), location.getPosZ()));
+            world, location.getPosX(), location.getPosY(), location.getPosZ(),
+            location.getYaw(), location.getPitch()));
     }
 
     @Override

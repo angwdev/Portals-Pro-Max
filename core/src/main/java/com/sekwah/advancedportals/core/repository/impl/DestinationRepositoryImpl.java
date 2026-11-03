@@ -2,6 +2,7 @@ package com.sekwah.advancedportals.core.repository.impl;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import com.sekwah.advancedportals.core.AdvancedPortalsCore;
 import com.sekwah.advancedportals.core.destination.Destination;
 import com.sekwah.advancedportals.core.repository.IDestinationRepository;
 import com.sekwah.advancedportals.core.serializeddata.DataStorage;
@@ -50,21 +51,31 @@ public class DestinationRepositoryImpl implements IDestinationRepository {
         if (!isValidName(name)) {
             throw new IllegalArgumentException("Invalid name: " + name);
         }
-        return dataStorage.loadFile(Destination.class,
-                                    fileLocation + name + ".yaml");
+        Destination destination = dataStorage.loadFile(
+            Destination.class, fileLocation + name + ".yaml");
+        if (destination != null) {
+            AdvancedPortalsCore.getInstance()
+                .getModule()
+                .getInjector()
+                .injectMembers(destination);
+        }
+        return destination;
     }
 
     @Override
     public List<String> getAllNames() {
-        return dataStorage.listAllFiles(fileLocation, true);
+        return dataStorage.listAllFiles(fileLocation, true, "yaml");
     }
 
     @Override
     public List<Destination> getAll() {
         List<Destination> destinations = new ArrayList<>();
-        List<String> allFiles = dataStorage.listAllFiles(fileLocation, true);
+        List<String> allFiles = dataStorage.listAllFiles(fileLocation, true, "yaml");
         for (String fileName : allFiles) {
             Destination destination = this.get(fileName);
+            if (destination == null) {
+                continue;
+            }
             // Forces the name tag to be up-to-date on load
             String[] name = destination.getArgValues(NameTag.TAG_NAME);
             if (name != null && name.length > 0) {

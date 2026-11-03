@@ -26,12 +26,12 @@ public class Destination implements TagTarget {
     @Inject
     transient TagRegistry tagRegistry;
 
-    private PlayerLocation loc;
+    private volatile PlayerLocation loc;
 
     private final HashMap<String, String[]> args = new HashMap<>();
     private final transient List<DataTag> destiTags = new ArrayList<>();
 
-    private transient boolean isSorted = false;
+    private transient volatile boolean isSorted = false;
 
     public Destination() {
         this.loc = new PlayerLocation();
@@ -42,27 +42,35 @@ public class Destination implements TagTarget {
     }
 
     @Override
-    public String[] getArgValues(String argName) {
+    public synchronized String[] getArgValues(String argName) {
         return this.args.get(argName);
     }
 
     @Override
-    public void setArgValues(String argName, String[] argValue) {
+    public synchronized void setArgValues(String argName, String[] argValue) {
         this.isSorted = false;
         this.args.put(argName, argValue);
     }
 
     @Override
-    public void addArg(String argName, String argValues) {
+    public synchronized void addArg(String argName, String argValues) {
         this.isSorted = false;
+        String[] existing = this.args.get(argName);
+        if (existing == null) {
+            this.args.put(argName, new String[] {argValues});
+            return;
+        }
+        String[] updated = Arrays.copyOf(existing, existing.length + 1);
+        updated[existing.length] = argValues;
+        this.args.put(argName, updated);
     }
 
     public void setArgValues(DataTag portalTag) {
-        this.isSorted = false;
         this.setArgValues(portalTag.NAME, portalTag.VALUES);
     }
 
-    public void removeArg(String arg) {
+    @Override
+    public synchronized void removeArg(String arg) {
         this.isSorted = false;
         this.args.remove(arg);
     }
@@ -139,7 +147,8 @@ public class Destination implements TagTarget {
         }
     }
 
-    public ArrayList<DataTag> getArgs() {
+    @Override
+    public synchronized ArrayList<DataTag> getArgs() {
         ArrayList<DataTag> tagList = new ArrayList<>();
         for (Map.Entry<String, String[]> entry : this.args.entrySet()) {
             tagList.add(new DataTag(entry.getKey(), entry.getValue()));
@@ -147,8 +156,10 @@ public class Destination implements TagTarget {
         return tagList;
     }
 
+    @Override
     public String getName() {
-        return this.getArgValues("name")[0];
+        String[] name = this.getArgValues("name");
+        return name == null || name.length == 0 ? null : name[0];
     }
 
     @Override

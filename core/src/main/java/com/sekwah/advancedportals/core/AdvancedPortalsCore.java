@@ -188,6 +188,12 @@ public class AdvancedPortalsCore {
                                               new DisableBeaconSubCommand());
         this.portalCommand.registerSubCommand("move",
                                               new MovePortalSubCommand());
+        this.portalCommand.registerSubCommand("edit",
+                                              new EditPortalSubCommand());
+        this.portalCommand.registerSubCommand("rename",
+                                              new RenamePortalSubCommand());
+        this.portalCommand.registerSubCommand("region",
+                                              new RegionPortalSubCommand());
 
         commandRegister.registerCommand("portal", this.portalCommand);
     }
@@ -205,6 +211,8 @@ public class AdvancedPortalsCore {
         this.destiCommand.registerSubCommand("list", new ListDestiSubCommand());
         this.destiCommand.registerSubCommand("show", new ShowDestiSubCommand());
         this.destiCommand.registerSubCommand("move", new MoveDestiSubCommand());
+        this.destiCommand.registerSubCommand("edit", new EditDestiSubCommand());
+        this.destiCommand.registerSubCommand("info", new InfoDestiSubCommand());
 
         commandRegister.registerCommand("destination", this.destiCommand);
     }

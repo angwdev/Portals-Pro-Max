@@ -6,6 +6,7 @@ import com.sekwah.advancedportals.core.serializeddata.DataTag;
 import com.sekwah.advancedportals.core.util.TagReader;
 import com.sekwah.advancedportals.core.warphandler.Tag;
 import java.util.*;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public abstract class CreateTaggedSubCommand implements SubCommand {
@@ -138,49 +139,66 @@ public abstract class CreateTaggedSubCommand implements SubCommand {
         return suggestions;
     }
 
+    /**
+     * Finds the tag with the name or one of the aliases, null if there is
+     * none.
+     */
+    protected Tag findRelatedTag(String nameOrAlias) {
+        for (Tag tag : this.getRelatedTags()) {
+            if (tag.getName().equals(nameOrAlias)) {
+                return tag;
+            }
+            String[] aliases = tag.getAliases();
+            if (aliases != null && Arrays.asList(aliases).contains(nameOrAlias)) {
+                return tag;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Converts aliases to the real tag names, splits the values of tags that
+     * support multiple values, merges the tags that were given more than once
+     * and drops anything that isn't a tag for this kind of target.
+     *
+     * <p>Only the tag that is being processed decides how its values are
+     * split. (Previously the first splitting tag in the registry, e.g.
+     * destination, split the values of every other tag too so a message such
+     * as "Welcome, traveler" was cut in half.)
+     */
     protected void filterAndProcessTags(List<DataTag> dataTags) {
-        List<Tag> relatedTags = this.getRelatedTags();
-        List<DataTag> processedTags = new ArrayList<>();
+        Map<String, List<String>> processed = new LinkedHashMap<>();
 
         for (DataTag dataTag : dataTags) {
-            for (Tag tag : relatedTags) {
-                if (tag instanceof Tag.Split) {
-                    Tag.Split splitTag = (Tag.Split) tag;
-                    String splitString = splitTag.splitString();
-                    if (splitString != null) {
-                        List<String> newValues = new ArrayList<>();
-                        for (String split : dataTag.VALUES) {
-                            newValues.addAll(
-                                Arrays.stream(split.split(splitString))
-                                    .map(String::trim)
-                                    .collect(Collectors.toList()));
-                        }
-                        dataTag = new DataTag(dataTag.NAME,
-                                              newValues.toArray(new String[0]));
+            Tag tag = this.findRelatedTag(dataTag.NAME);
+            if (tag == null) {
+                continue;
+            }
+
+            List<String> values =
+                processed.computeIfAbsent(tag.getName(), k -> new ArrayList<>());
+
+            String splitString = null;
+            if (tag instanceof Tag.Split) {
+                splitString = ((Tag.Split) tag).splitString();
+            }
+            for (String value : dataTag.VALUES) {
+                if (splitString != null) {
+                    for (String part : value.split(Pattern.quote(splitString))) {
+                        values.add(part.trim());
                     }
-                }
-                if (dataTag.NAME.equals(tag.getName())) {
-                    // DataTag name matches the tag's main name, add as is
-                    processedTags.add(dataTag);
-                    break;
-                } else if (tag.getAliases() != null
-                           && Arrays.asList(tag.getAliases())
-                                  .contains(dataTag.NAME)) {
-                    // There is currently an edge case where if someone uses
-                    // multiple aliases or names for tags at the same time,
-                    // it'll only use the last one applied to the mapping.
-                    // DataTag name matches an alias, create a new DataTag with
-                    // the main name
-                    processedTags.add(
-                        new DataTag(tag.getName(), dataTag.VALUES));
-                    break;
+                } else {
+                    values.add(value);
                 }
             }
         }
 
         // Replace the original dataTags list with the processed tags
         dataTags.clear();
-        dataTags.addAll(processedTags);
+        for (Map.Entry<String, List<String>> entry : processed.entrySet()) {
+            dataTags.add(new DataTag(entry.getKey(),
+                                     entry.getValue().toArray(new String[0])));
+        }
         // Sort the tags by name however make sure name is first
         dataTags.sort((o1, o2) -> {
             if (o1.NAME.equals("name")) {

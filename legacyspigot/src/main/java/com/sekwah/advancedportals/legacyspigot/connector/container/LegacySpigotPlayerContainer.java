@@ -17,6 +17,7 @@ import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
 import org.bukkit.Effect;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -73,10 +74,13 @@ public class LegacySpigotPlayerContainer
 
     @Override
     public boolean teleport(PlayerLocation location) {
+        World world = Bukkit.getWorld(location.getWorldName());
+        if (world == null) {
+            return false;
+        }
         return this.player.teleport(new Location(
-            Bukkit.getWorld(location.getWorldName()), location.getPosX(),
-            location.getPosY(), location.getPosZ(), location.getYaw(),
-            location.getPitch()));
+            world, location.getPosX(), location.getPosY(), location.getPosZ(),
+            location.getYaw(), location.getPitch()));
     }
 
     @Override
@@ -131,10 +135,11 @@ public class LegacySpigotPlayerContainer
                                  double ySpread, double zSpread, int count,
                                  Color color) {
         // Check distance to player
-        if (this.player.getLocation().distance(
-                new Location(this.player.getWorld(), position.getX(),
-                             position.getY(), position.getZ()))
-            > 180) {
+        Location playerLoc = this.player.getLocation();
+        double dx = playerLoc.getX() - position.getX();
+        double dy = playerLoc.getY() - position.getY();
+        double dz = playerLoc.getZ() - position.getZ();
+        if (dx * dx + dy * dy + dz * dz > 180 * 180) {
             return;
         }
 

@@ -9,7 +9,10 @@ import com.sekwah.advancedportals.core.serializeddata.Vector;
 import com.sekwah.advancedportals.shadowed.inject.Inject;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.entity.Entity;
+import org.bukkit.event.player.PlayerTeleportEvent;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Just a temporary container for whenever advanced portals needs to get data
@@ -45,11 +48,35 @@ public class FoliaEntityContainer implements EntityContainer {
         return this.entity.getHeight();
     }
 
+    /**
+     * Folia/Paper teleports are asynchronous (the destination chunk may have
+     * to be loaded and the entity may change region), so the returned future
+     * only completes once the entity has really arrived.
+     */
+    @Override
+    public CompletableFuture<Boolean> teleportAsync(PlayerLocation location) {
+        World world = Bukkit.getWorld(location.getWorldName());
+        if (world == null) {
+            return CompletableFuture.completedFuture(false);
+        }
+        return this.entity
+            .teleportAsync(new Location(world, location.getPosX(),
+                                        location.getPosY(), location.getPosZ(),
+                                        location.getYaw(), location.getPitch()),
+                           PlayerTeleportEvent.TeleportCause.PLUGIN)
+            .exceptionally(throwable -> false);
+    }
+
+    /**
+     * @return true if the teleport was started. Use {@link #teleportAsync} to
+     *     find out if it finished.
+     */
     @Override
     public boolean teleport(PlayerLocation location) {
-        this.entity.teleportAsync(new Location(
-                Bukkit.getWorld(location.getWorldName()), location.getPosX(),
-                location.getPosY(), location.getPosZ()));
+        if (Bukkit.getWorld(location.getWorldName()) == null) {
+            return false;
+        }
+        this.teleportAsync(location);
         return true;
     }
 

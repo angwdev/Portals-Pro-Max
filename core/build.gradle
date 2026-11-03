@@ -23,6 +23,16 @@ dependencies {
     implementation group: 'com.google.guava', name: 'guava', version: '33.2.0-jre'
     implementation group: 'io.netty', name: 'netty-buffer', version: '4.1.109.Final'
     implementation group: 'io.netty', name: 'netty-codec', version: '4.1.109.Final'
+
+    testImplementation platform('org.junit:junit-bom:5.10.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    // The real translations, so the command tests can read the messages
+    testRuntimeOnly project(':lang')
+}
+
+test {
+    useJUnitPlatform()
 }
 
 shadowJar {

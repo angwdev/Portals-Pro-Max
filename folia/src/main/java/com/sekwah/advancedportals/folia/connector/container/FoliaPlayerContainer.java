@@ -51,11 +51,16 @@ public class FoliaPlayerContainer
         player.sendMessage(message);
     }
 
+    /**
+     * Runs on the thread that currently owns the player. The entity
+     * scheduler follows the player between regions (the region scheduler at
+     * the players old location did not, and reading the location from a thread
+     * that doesn't own the player is not allowed on Folia).
+     */
     @Override
     public void runTask(Runnable runnable) {
-        this.player.getServer().getRegionScheduler().run(AdvancedPortalsPlugin.getInstance(), player.getLocation(), (_) -> {
-            runnable.run();
-        });
+        this.player.getScheduler().run(AdvancedPortalsPlugin.getInstance(),
+                                       (task) -> runnable.run(), null);
     }
 
     @Override
@@ -67,16 +72,6 @@ public class FoliaPlayerContainer
     @Override
     public boolean isOp() {
         return this.player.isOp();
-    }
-
-    @Override
-    public boolean teleport(PlayerLocation location) {
-        this.player.teleportAsync(new Location(
-                Bukkit.getWorld(location.getWorldName()), location.getPosX(),
-                location.getPosY(), location.getPosZ(), location.getYaw(),
-                location.getPitch()));
-        // Nowhere in core do we currently pay attention to this, but it may be interesting to make it handle async in the future.
-        return true;
     }
 
     @Override
@@ -130,11 +125,13 @@ public class FoliaPlayerContainer
     public void spawnColoredDust(Vector position, double xSpread,
                                  double ySpread, double zSpread, int count,
                                  Color color) {
-        // Check distance to player
-        if (this.player.getLocation().distance(
-                new Location(this.player.getWorld(), position.getX(),
-                             position.getY(), position.getZ()))
-            > 180) {
+        // Check distance to player (squared, so no square root or extra
+        // Location per particle)
+        Location playerLoc = this.player.getLocation();
+        double dx = playerLoc.getX() - position.getX();
+        double dy = playerLoc.getY() - position.getY();
+        double dz = playerLoc.getZ() - position.getZ();
+        if (dx * dx + dy * dy + dz * dz > 180 * 180) {
             return;
         }
 

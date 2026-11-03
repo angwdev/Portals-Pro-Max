@@ -45,13 +45,8 @@ public class CoreListeners {
     }
 
     private void setIfInPortal(PlayerContainer player) {
-        String inPortal =
-            this.portalServices.inPortalRegionGetName(player.getBlockLoc());
-
-        if (inPortal == null) {
-            inPortal = this.portalServices.inPortalRegionGetName(
-                player.getBlockLoc().addY((int) player.getHeight()));
-        }
+        String inPortal = this.portalServices.inPortalRegionGetName(
+            player.getLoc(), player.getHeight(), 0);
 
         this.playerDataServices.getPlayerData(player).setInPortal(inPortal);
     }
@@ -88,7 +83,18 @@ public class CoreListeners {
      * @param toLoc
      */
     public void playerMove(PlayerContainer player, PlayerLocation toLoc) {
-        this.portalServices.checkPortalActivation(player, toLoc,
+        this.playerMove(player, null, toLoc);
+    }
+
+    /**
+     * @param player
+     * @param fromLoc where the player moved from, can be null. Gives the
+     *     knockback an accurate direction.
+     * @param toLoc where the player is moving to
+     */
+    public void playerMove(PlayerContainer player, PlayerLocation fromLoc,
+                           PlayerLocation toLoc) {
+        this.portalServices.checkPortalActivation(player, fromLoc, toLoc,
                                                   TriggerType.MOVEMENT);
     }
 
@@ -235,7 +241,6 @@ public class CoreListeners {
     }
 
     public boolean entityPortalEvent(EntityContainer entity) {
-        BlockLocation pos = entity.getBlockLoc();
         if (entity instanceof PlayerContainer) {
             PlayerContainer player = (PlayerContainer) entity;
             PlayerData playerData = playerDataServices.getPlayerData(player);
@@ -244,9 +249,9 @@ public class CoreListeners {
             }
         }
 
-        return !(portalServices.inPortalRegion(pos, 1)
-                 || portalServices.inPortalRegion(
-                     pos.addY((int) entity.getHeight()), 1));
+        return portalServices.inPortalRegionGetName(
+                   entity.getLoc(), entity.getHeight(), 1)
+            == null;
     }
 
     public boolean playerPortalEvent(PlayerContainer player,
@@ -268,17 +273,26 @@ public class CoreListeners {
 
         // Extra checks to prevent the player from being teleported by touching
         // a portal but not having their body fully in the portal
-        BlockLocation pos = player.getBlockLoc();
-
-        boolean feetInPortal = portalServices.inPortalRegion(pos, 1);
-        boolean headInPortal = portalServices.inPortalRegion(
-            pos.addY((int) player.getHeight()), 1);
-
-        return !(feetInPortal || headInPortal);
+        return portalServices.inPortalRegionGetName(player.getLoc(),
+                                                    player.getHeight(), 1)
+            == null;
     }
 
     public boolean physicsEvent(BlockLocation blockLocation) {
         return !configRepository.getDisablePhysicsEvents()
             || !portalServices.inPortalRegionProtected(blockLocation);
+    }
+
+    /**
+     * Allocation free variant for BlockPhysicsEvent, which fires an enormous
+     * number of times.
+     */
+    public boolean physicsEvent(String worldName, int x, int y, int z) {
+        if (!configRepository.getDisablePhysicsEvents()) {
+            return true;
+        }
+        return portalServices.getIndex().findContaining(
+                   worldName, x, y, z, configRepository.getProtectionRadius())
+            == null;
     }
 }

@@ -38,7 +38,10 @@ dependencies {
     implementation project(":core")
     runtimeOnly project(path: ':core', configuration: 'shadow')
 
-    compileOnly "dev.folia:folia-api:26.1.2.build.8-stable"
+    // Paper API contains everything Folia needs (region/entity schedulers,
+    // teleportAsync...), and the stable builds are ahead of the Folia ones.
+    // The plugin still declares folia-supported: true in plugin.yml.
+    compileOnly "io.papermc.paper:paper-api:26.3.build.238-stable"
 
     // Soft dependencies
     compileOnly 'me.clip:placeholderapi:2.11.6'

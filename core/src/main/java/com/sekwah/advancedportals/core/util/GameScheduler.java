@@ -3,20 +3,29 @@ package com.sekwah.advancedportals.core.util;
 import com.google.inject.Singleton;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * For all delayed and repeating tasks.
  */
 @Singleton
 public final class GameScheduler {
-    private final ArrayList<DelayedGameTickEvent> newTickEvents =
-        new ArrayList<>();
+    /**
+     * Events can be scheduled from any thread (e.g. region threads on Folia),
+     * they are moved over to the list that is only touched by tick() on the
+     * next tick.
+     */
+    private final Queue<DelayedGameTickEvent> newTickEvents =
+        new ConcurrentLinkedQueue<>();
     private final ArrayList<DelayedGameTickEvent> delayedTickEvents =
         new ArrayList<>();
 
     public void tick() {
-        this.delayedTickEvents.addAll(this.newTickEvents);
-        this.newTickEvents.clear();
+        DelayedGameTickEvent newEvent;
+        while ((newEvent = this.newTickEvents.poll()) != null) {
+            this.delayedTickEvents.add(newEvent);
+        }
         Iterator<DelayedGameTickEvent> tickEventIterator =
             this.delayedTickEvents.iterator();
         while (tickEventIterator.hasNext()) {

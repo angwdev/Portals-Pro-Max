@@ -15,6 +15,7 @@ import com.sekwah.advancedportals.core.util.Lang;
 import com.sekwah.advancedportals.core.warphandler.ActivationData;
 import com.sekwah.advancedportals.core.warphandler.Tag;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.Random;
 
 public class DestiTag implements Tag.Activation, Tag.AutoComplete, Tag.Split {
@@ -115,8 +116,12 @@ public class DestiTag implements Tag.Activation, Tag.AutoComplete, Tag.Split {
                     tagRegistry.getActivationHandler(destiTag.NAME,
                                                      Tag.TagType.DESTINATION);
                 if (activationHandler != null) {
+                    // The values of the destination tag, NOT the portals
+                    // destination values (which are just the list of
+                    // destination names).
                     activationHandler.postActivated(target, player,
-                                                    activationData, argData);
+                                                    activationData,
+                                                    destiTag.VALUES);
                 }
             }
             String message = activationData.getMetadata(MessageTag.TAG_NAME);
@@ -140,6 +145,14 @@ public class DestiTag implements Tag.Activation, Tag.AutoComplete, Tag.Split {
         Destination destination =
             destinationServices.getDestination(selectedArg);
 
+        if (destination == null) {
+            // Removed between the checks and the warp
+            player.sendMessage(Lang.getNegativePrefix()
+                               + Lang.translateInsertVariables(
+                                   "desti.error.notfound", selectedArg));
+            return false;
+        }
+
         if (serverContainer.getWorld(destination.getLoc().getWorldName())
             == null) {
             player.sendMessage(Lang.getNegativePrefix()
@@ -150,47 +163,54 @@ public class DestiTag implements Tag.Activation, Tag.AutoComplete, Tag.Split {
             return false;
         }
 
-        if (destination != null) {
-            WarpEffect.Visual warpEffectVisual =
-                warpEffectRegistry.getVisualEffect(
-                    configRepository.getWarpVisual());
-            WarpEffect.Sound warpEffectSound =
-                warpEffectRegistry.getSoundEffect(
-                    configRepository.getWarpSound());
-            if (configRepository.getWarpEffectEnabled()) {
-                if (warpEffectVisual != null) {
-                    warpEffectVisual.onWarpVisual(player,
-                                                  WarpEffect.Action.ENTER);
-                }
-                if (warpEffectSound != null) {
-                    warpEffectSound.onWarpSound(player,
-                                                WarpEffect.Action.ENTER);
-                }
-            }
+        WarpEffect.Visual warpEffectVisual = warpEffectRegistry.getVisualEffect(
+            configRepository.getWarpVisual());
+        WarpEffect.Sound warpEffectSound =
+            warpEffectRegistry.getSoundEffect(configRepository.getWarpSound());
+        final boolean effectsEnabled = configRepository.getWarpEffectEnabled();
 
-            player.teleport(destination.getLoc());
-
-            for (DataTag destiTag : destination.getArgs()) {
-                Tag.Activation activationHandler =
-                    tagRegistry.getActivationHandler(destiTag.NAME,
-                                                     Tag.TagType.DESTINATION);
-                if (activationHandler != null) {
-                    activationHandler.activated(target, player, activationData,
-                                                argData);
-                }
+        if (effectsEnabled) {
+            if (warpEffectVisual != null) {
+                warpEffectVisual.onWarpVisual(player, WarpEffect.Action.ENTER);
             }
-
-            if (configRepository.getWarpEffectEnabled()) {
-                if (warpEffectVisual != null) {
-                    warpEffectVisual.onWarpVisual(player,
-                                                  WarpEffect.Action.EXIT);
-                }
-                if (warpEffectSound != null) {
-                    warpEffectSound.onWarpSound(player, WarpEffect.Action.EXIT);
-                }
+            if (warpEffectSound != null) {
+                warpEffectSound.onWarpSound(player, WarpEffect.Action.ENTER);
             }
-            activationData.setWarpStatus(ActivationData.WarpedStatus.WARPED);
         }
+
+        // On platforms with asynchronous teleports (Paper/Folia) the player has
+        // not arrived yet when this returns, so everything that needs to
+        // happen "at the destination" waits on the future. On the others it
+        // is already completed so this behaves exactly as before.
+        CompletableFuture<Boolean> teleport =
+            player.teleportAsync(destination.getLoc());
+        activationData.setTeleportFuture(teleport);
+
+        for (DataTag destiTag : destination.getArgs()) {
+            Tag.Activation activationHandler = tagRegistry.getActivationHandler(
+                destiTag.NAME, Tag.TagType.DESTINATION);
+            if (activationHandler != null) {
+                activationHandler.activated(target, player, activationData,
+                                            destiTag.VALUES);
+            }
+        }
+
+        if (effectsEnabled) {
+            final WarpEffect.Visual exitVisual = warpEffectVisual;
+            final WarpEffect.Sound exitSound = warpEffectSound;
+            teleport.thenAccept(success -> {
+                if (!success) {
+                    return;
+                }
+                if (exitVisual != null) {
+                    exitVisual.onWarpVisual(player, WarpEffect.Action.EXIT);
+                }
+                if (exitSound != null) {
+                    exitSound.onWarpSound(player, WarpEffect.Action.EXIT);
+                }
+            });
+        }
+        activationData.setWarpStatus(ActivationData.WarpedStatus.WARPED);
         return true;
     }
 

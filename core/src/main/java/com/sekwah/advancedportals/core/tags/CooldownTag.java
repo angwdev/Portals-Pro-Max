@@ -105,10 +105,15 @@ public class CooldownTag implements Tag.Activation, Tag.Creation {
     public boolean created(TagTarget target, PlayerContainer player,
                            String[] argData) {
         try {
-            Integer.parseInt(argData[0]);
+            if (argData == null || argData.length == 0
+                || Integer.parseInt(argData[0]) < 0) {
+                throw new NumberFormatException();
+            }
         } catch (NumberFormatException e) {
-            player.sendMessage(Lang.getNegativePrefix()
-                               + Lang.translate("tag.cooldown.fail"));
+            if (player != null) {
+                player.sendMessage(Lang.getNegativePrefix()
+                                   + Lang.translate("tag.cooldown.fail"));
+            }
             return false;
         }
         return true;

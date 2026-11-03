@@ -8,18 +8,17 @@ import com.sekwah.advancedportals.core.repository.IPlayerDataRepository;
 import com.sekwah.advancedportals.core.serializeddata.BlockLocation;
 import com.sekwah.advancedportals.core.serializeddata.PlayerData;
 import com.sekwah.advancedportals.core.util.Lang;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 @Singleton
 public final class PlayerDataServices {
     /**
      * Possibly change to the cache map Aztec was talking about
      */
-    private final Map<UUID, PlayerData> tempDataMap = new HashMap<>();
-    public static final ReentrantReadWriteLock tempDataMapLock = new ReentrantReadWriteLock();
+    private final Map<UUID, PlayerData> tempDataMap =
+        new ConcurrentHashMap<>();
 
     @Inject
     private IPlayerDataRepository tempDataRepository;
@@ -27,20 +26,25 @@ public final class PlayerDataServices {
     @Inject
     private ConfigRepository configRepository;
 
+    /**
+     * Called for every movement packet, so it must be cheap and must never
+     * block other (region) threads: a plain concurrent map lookup, only
+     * hitting the repository the first time a player is seen.
+     */
     public PlayerData getPlayerData(PlayerContainer player) {
-
-        tempDataMapLock.writeLock().lock();
-        var playerData = tempDataMap.computeIfAbsent(player.getUUID(), uuid -> {
-            PlayerData tempData =
-                    tempDataRepository.get(player.getUUID().toString());
+        UUID uuid = player.getUUID();
+        PlayerData playerData = tempDataMap.get(uuid);
+        if (playerData != null) {
+            return playerData;
+        }
+        return tempDataMap.computeIfAbsent(uuid, id -> {
+            PlayerData tempData = tempDataRepository.get(id.toString());
 
             if (tempData == null) {
                 tempData = new PlayerData();
             }
             return tempData;
         });
-        tempDataMapLock.writeLock().unlock();
-        return playerData;
     }
 
     public void setJoinCooldown(PlayerContainer player) {
@@ -53,9 +57,7 @@ public final class PlayerDataServices {
             tempDataRepository.save(player.getUUID().toString(),
                     getPlayerData(player));
         }
-        tempDataMapLock.writeLock().lock();
         tempDataMap.remove(player.getUUID());
-        tempDataMapLock.writeLock().unlock();
     }
 
     public void playerSelectorActivate(PlayerContainer player,

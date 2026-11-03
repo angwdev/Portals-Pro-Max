@@ -3,6 +3,7 @@ package com.sekwah.advancedportals.folia;
 import com.sekwah.advancedportals.core.CoreListeners;
 import com.sekwah.advancedportals.shadowed.inject.Inject;
 import com.sekwah.advancedportals.folia.utils.ContainerHelpers;
+import org.bukkit.block.Block;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -14,9 +15,10 @@ public class PhysicsListeners implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH)
     public void onPhysicsEvent(BlockPhysicsEvent event) {
-        if (!coreListeners.physicsEvent(
-                ContainerHelpers.toBlockLocation(
-                    event.getBlock().getLocation()))) {
+        Block block = event.getBlock();
+        if (!coreListeners.physicsEvent(block.getWorld().getName(),
+                                        block.getX(), block.getY(),
+                                        block.getZ())) {
             event.setCancelled(true);
         }
     }

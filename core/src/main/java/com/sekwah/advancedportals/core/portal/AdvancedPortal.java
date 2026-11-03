@@ -17,6 +17,7 @@ import com.sekwah.advancedportals.core.warphandler.ActivationData;
 import com.sekwah.advancedportals.core.warphandler.Tag;
 import com.sekwah.advancedportals.core.warphandler.TriggerType;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * @author sekwah41
@@ -25,15 +26,20 @@ public class AdvancedPortal implements TagTarget {
     @Inject
     private transient TagRegistry tagRegistry;
 
-    private BlockLocation maxLoc;
+    private volatile BlockLocation maxLoc;
 
-    private BlockLocation minLoc;
+    private volatile BlockLocation minLoc;
 
     private final HashMap<String, String[]> args = new HashMap<>();
 
-    private final transient List<DataTag> portalTags = new ArrayList<>();
+    /**
+     * Sorted snapshot of the tags. It is replaced as a whole (never mutated)
+     * so that region threads (Folia) can activate a portal while an admin is
+     * editing it without seeing a half built list.
+     */
+    private transient volatile List<DataTag> portalTags = Collections.emptyList();
 
-    private transient boolean isSorted = false;
+    private transient volatile boolean isSorted = false;
 
     @Inject
     private transient PlayerDataServices playerDataServices;
@@ -63,29 +69,40 @@ public class AdvancedPortal implements TagTarget {
     }
 
     @Override
-    public String[] getArgValues(String argName) {
+    public synchronized String[] getArgValues(String argName) {
         return this.args.get(argName);
     }
 
     @Override
-    public void setArgValues(String argName, String[] argValues) {
+    public synchronized void setArgValues(String argName, String[] argValues) {
         this.isSorted = false;
         this.args.put(argName, argValues);
     }
 
     @Override
-    public void addArg(String argName, String argValues) {
-        // TODO need to add the ability to add args after creation
+    public synchronized void addArg(String argName, String argValues) {
+        this.isSorted = false;
+        String[] existing = this.args.get(argName);
+        if (existing == null) {
+            this.args.put(argName, new String[] {argValues});
+            return;
+        }
+        String[] updated = Arrays.copyOf(existing, existing.length + 1);
+        updated[existing.length] = argValues;
+        this.args.put(argName, updated);
     }
 
     public void updatePortalTagList() {
-        portalTags.clear();
-        for (Map.Entry<String, String[]> entry : args.entrySet()) {
-            this.portalTags.add(new DataTag(entry.getKey(), entry.getValue()));
+        List<DataTag> newTags;
+        synchronized (this) {
+            newTags = new ArrayList<>(this.args.size());
+            for (Map.Entry<String, String[]> entry : args.entrySet()) {
+                newTags.add(new DataTag(entry.getKey(), entry.getValue()));
+            }
         }
 
         // sort the tags by priority
-        this.portalTags.sort(Comparator.comparingInt(o -> {
+        newTags.sort(Comparator.comparingInt(o -> {
             Tag tag = tagRegistry.getTag(o.NAME);
             if (tag instanceof Tag.OrderPriority) {
                 Tag.OrderPriority tagPriority = (Tag.OrderPriority) tag;
@@ -94,11 +111,12 @@ public class AdvancedPortal implements TagTarget {
                 return Tag.Priority.NORMAL.ordinal();
             }
         }));
-        isSorted = true;
+        this.portalTags = newTags;
+        this.isSorted = true;
     }
 
     @Override
-    public void removeArg(String arg) {
+    public synchronized void removeArg(String arg) {
         this.isSorted = false;
         this.args.remove(arg);
     }
@@ -109,7 +127,8 @@ public class AdvancedPortal implements TagTarget {
      * @param loc1 The first location.
      * @param loc2 The second location.
      */
-    public void updateBounds(BlockLocation loc1, BlockLocation loc2) {
+    public synchronized void updateBounds(BlockLocation loc1,
+                                          BlockLocation loc2) {
         int minX = Math.min(loc1.getPosX(), loc2.getPosX());
         int minY = Math.min(loc1.getPosY(), loc2.getPosY());
         int minZ = Math.min(loc1.getPosZ(), loc2.getPosZ());
@@ -118,8 +137,14 @@ public class AdvancedPortal implements TagTarget {
         int maxY = Math.max(loc1.getPosY(), loc2.getPosY());
         int maxZ = Math.max(loc1.getPosZ(), loc2.getPosZ());
 
-        this.minLoc = new BlockLocation(loc1.getWorldName(), minX, minY, minZ);
-        this.maxLoc = new BlockLocation(loc2.getWorldName(), maxX, maxY, maxZ);
+        // Both corners always share the world of the first location. (The old
+        // code could store two different worlds if the corners disagreed.)
+        BlockLocation newMin =
+            new BlockLocation(loc1.getWorldName(), minX, minY, minZ);
+        BlockLocation newMax =
+            new BlockLocation(loc1.getWorldName(), maxX, maxY, maxZ);
+        this.minLoc = newMin;
+        this.maxLoc = newMax;
     }
 
     /**
@@ -134,6 +159,8 @@ public class AdvancedPortal implements TagTarget {
         if (!isSorted) {
             updatePortalTagList();
         }
+        // Local snapshot so edits mid activation can't change what we iterate
+        final List<DataTag> portalTags = this.portalTags;
 
         PlayerData playerData = playerDataServices.getPlayerData(player);
 
@@ -159,7 +186,7 @@ public class AdvancedPortal implements TagTarget {
 
         ActivationData data = new ActivationData(triggerType);
 
-        for (DataTag portalTag : this.portalTags) {
+        for (DataTag portalTag : portalTags) {
             Tag.Activation activationHandler = tagRegistry.getActivationHandler(
                 portalTag.NAME, Tag.TagType.PORTAL);
             if (activationHandler != null) {
@@ -179,7 +206,7 @@ public class AdvancedPortal implements TagTarget {
                 }
             }
         }
-        for (DataTag portalTag : this.portalTags) {
+        for (DataTag portalTag : portalTags) {
             Tag.Activation activationHandler = tagRegistry.getActivationHandler(
                 portalTag.NAME, Tag.TagType.PORTAL);
             if (activationHandler != null
@@ -188,13 +215,35 @@ public class AdvancedPortal implements TagTarget {
                 return ActivationResult.FAILED_DO_KNOCKBACK;
             }
         }
-        for (DataTag portalTag : this.portalTags) {
-            Tag.Activation activationHandler = tagRegistry.getActivationHandler(
-                portalTag.NAME, Tag.TagType.PORTAL);
-            if (activationHandler != null) {
-                activationHandler.postActivated(
-                    this, player, data, this.getArgValues(portalTag.NAME));
+        // Post activation (messages, commands, charging costs...) should
+        // happen once the player has actually arrived, which on Paper/Folia
+        // is after the asynchronous teleport completes. If the teleport failed
+        // (e.g. another plugin cancelled it) nothing is charged or run.
+        final Runnable postActivation = () -> {
+            for (DataTag portalTag : portalTags) {
+                Tag.Activation activationHandler =
+                    tagRegistry.getActivationHandler(portalTag.NAME,
+                                                     Tag.TagType.PORTAL);
+                if (activationHandler != null) {
+                    activationHandler.postActivated(
+                        this, player, data, this.getArgValues(portalTag.NAME));
+                }
             }
+        };
+        final CompletableFuture<Boolean> teleportFuture =
+            data.getTeleportFuture();
+        if (teleportFuture == null) {
+            postActivation.run();
+        } else if (teleportFuture.isDone()) {
+            if (Boolean.TRUE.equals(teleportFuture.getNow(false))) {
+                postActivation.run();
+            }
+        } else {
+            teleportFuture.thenAccept(success -> {
+                if (success) {
+                    postActivation.run();
+                }
+            });
         }
         if (data.hasActivated()) {
             playerData.setPortalBlockCooldown(1000);
@@ -217,24 +266,36 @@ public class AdvancedPortal implements TagTarget {
     }
 
     public boolean isLocationInPortal(BlockLocation loc, int additionalArea) {
-        double playerX = loc.getPosX();
-        double playerY = loc.getPosY();
-        double playerZ = loc.getPosZ();
+        return this.isLocationInPortal(loc.getWorldName(), loc.getPosX(),
+                                       loc.getPosY(), loc.getPosZ(),
+                                       additionalArea);
+    }
 
-        return Objects.equals(loc.getWorldName(), this.minLoc.getWorldName())
-            && playerX >= this.minLoc.getPosX() - additionalArea
-            && playerX < this.maxLoc.getPosX() + 1 + additionalArea
-            && playerY >= this.minLoc.getPosY() - additionalArea
-            && playerY < this.maxLoc.getPosY() + 1 + additionalArea
-            && playerZ >= this.minLoc.getPosZ() - additionalArea
-            && playerZ < this.maxLoc.getPosZ() + 1 + additionalArea;
+    /**
+     * Allocation free bounds check, used by the hot paths (movement and block
+     * protection events).
+     */
+    public boolean isLocationInPortal(String worldName, int x, int y, int z,
+                                      int additionalArea) {
+        // Read once so a concurrent updateBounds can't give us a mixed box
+        final BlockLocation min = this.minLoc;
+        final BlockLocation max = this.maxLoc;
+
+        return x >= min.getPosX() - additionalArea
+            && x < max.getPosX() + 1 + additionalArea
+            && y >= min.getPosY() - additionalArea
+            && y < max.getPosY() + 1 + additionalArea
+            && z >= min.getPosZ() - additionalArea
+            && z < max.getPosZ() + 1 + additionalArea
+            && Objects.equals(worldName, min.getWorldName());
     }
 
     public void setArgValues(DataTag portalTag) {
         this.setArgValues(portalTag.NAME, portalTag.VALUES);
     }
 
-    public ArrayList<DataTag> getArgs() {
+    @Override
+    public synchronized ArrayList<DataTag> getArgs() {
         ArrayList<DataTag> tagList = new ArrayList<>();
         for (Map.Entry<String, String[]> entry : this.args.entrySet()) {
             tagList.add(new DataTag(entry.getKey(), entry.getValue()));
@@ -243,6 +304,9 @@ public class AdvancedPortal implements TagTarget {
     }
 
     public boolean isTriggerBlock(String blockMaterial) {
+        if (blockMaterial == null) {
+            return false;
+        }
         String[] triggerBlocks = this.getArgValues(TriggerBlockTag.TAG_NAME);
         if (triggerBlocks != null) {
             for (String triggerBlock : triggerBlocks) {
@@ -254,8 +318,17 @@ public class AdvancedPortal implements TagTarget {
         return false;
     }
 
+    @Override
     public String getName() {
-        return getArgValues("name")[0];
+        String[] name = getArgValues("name");
+        return name == null || name.length == 0 ? null : name[0];
+    }
+
+    /**
+     * @return the world this portal is in
+     */
+    public String getWorldName() {
+        return this.minLoc.getWorldName();
     }
 
     @Override

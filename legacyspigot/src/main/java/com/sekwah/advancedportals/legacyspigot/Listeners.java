@@ -49,9 +49,18 @@ public class Listeners implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onMoveEvent(PlayerMoveEvent event) {
+        Location from = event.getFrom();
         Location to = event.getTo();
+        // Turning the camera fires this event as often as walking does. It
+        // can't move the player into or out of a portal so skip it.
+        if (to == null
+            || (from.getX() == to.getX() && from.getY() == to.getY()
+                && from.getZ() == to.getZ())) {
+            return;
+        }
         coreListeners.playerMove(
             new LegacySpigotPlayerContainer(event.getPlayer()),
+            ContainerHelpers.toPlayerLocation(from),
             ContainerHelpers.toPlayerLocation(to));
     }
 
@@ -207,14 +216,12 @@ public class Listeners implements Listener {
         if (!configRepository.getPortalProtection())
             return;
 
-        List<Block> blockList = event.blockList();
-        for (int i = 0; i < blockList.size(); i++) {
-            Block block = blockList.get(i);
-            if (portalServices.inPortalRegionProtected(
-                    ContainerHelpers.toBlockLocation(block.getLocation()))) {
-                blockList.remove(i);
-                i--;
-            }
-        }
+        // removeIf is a single pass, the old index based remove was O(n^2) on
+        // big explosions
+        event.blockList().removeIf(
+            block
+            -> portalServices.inPortalRegionProtected(
+                block.getWorld().getName(), block.getX(), block.getY(),
+                block.getZ()));
     }
 }

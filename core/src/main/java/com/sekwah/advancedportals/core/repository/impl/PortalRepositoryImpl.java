@@ -17,15 +17,6 @@ public class PortalRepositoryImpl implements IPortalRepository {
     @Inject
     DataStorage dataStorage;
 
-    /**
-     * In memory copy of the portal files as they will be accessed every
-     * movement tick.
-     *
-     * <p>If we need to get it by name we can just load it from the file, but
-     * this is good for looping fast for the player move events.
-     */
-    private final List<AdvancedPortal> portals = new ArrayList<>();
-
     private boolean isValidName(String name) {
         return name != null && !name.contains("/") && !name.contains("\\");
     }
@@ -78,7 +69,7 @@ public class PortalRepositoryImpl implements IPortalRepository {
     @Override
     public List<AdvancedPortal> getAll() {
         List<AdvancedPortal> portals = new ArrayList<>();
-        List<String> allFiles = dataStorage.listAllFiles(fileLocation, false);
+        List<String> allFiles = dataStorage.listAllFiles(fileLocation, false, "yaml");
         for (String fileName : allFiles) {
             AdvancedPortal portal = dataStorage.loadFile(
                 AdvancedPortal.class, fileLocation + fileName);
@@ -90,6 +81,9 @@ public class PortalRepositoryImpl implements IPortalRepository {
                     .injectMembers(portal);
             }
 
+            if (portal == null) {
+                continue;
+            }
             // Forces the name tag to be up-to-date on load
             String[] name = portal.getArgValues(NameTag.TAG_NAME);
             if (name != null && name.length > 0) {

@@ -109,6 +109,20 @@ public class Permissions {
         DESTI.createChild("move", PermissionBuilder.PermissionDefault.OP)
             .description("Allows you to move a destination to your current location");
 
+    public static final PermissionBuilder EDIT_PORTAL =
+        PORTAL.createChild("edit", PermissionBuilder.PermissionDefault.OP)
+            .description("Allows you to edit the tags, name and region of "
+                         + "existing portals");
+
+    public static final PermissionBuilder EDIT_DESTI =
+        DESTI.createChild("edit", PermissionBuilder.PermissionDefault.OP)
+            .description("Allows you to edit the tags of existing "
+                         + "destinations");
+
+    public static final PermissionBuilder INFO_DESTI =
+        DESTI.createChild("info", PermissionBuilder.PermissionDefault.OP)
+            .description("Allows you to view the details of a destination");
+
     public static final PermissionBuilder USE_PORTAL =
         PORTAL.createChild("use", PermissionBuilder.PermissionDefault.TRUE)
             .description("Allows you to use (enter/activate) portals");
@@ -136,6 +150,11 @@ public class Permissions {
             .addGrantChild(IMPORT)
             .addGrantChild(SHOW_PORTAL)
             .addGrantChild(PORTAL_INFO)
+            .addGrantChild(EDIT_PORTAL)
+            .addGrantChild(EDIT_DESTI)
+            .addGrantChild(INFO_DESTI)
+            .addGrantChild(MOVE_DESTI)
+            .addGrantChild(RENAME_DESTI)
             .addGrantChild(BUILD);
 
         CREATE_COMMAND_LEVEL
