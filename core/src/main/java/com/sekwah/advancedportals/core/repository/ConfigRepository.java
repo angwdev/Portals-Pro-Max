@@ -58,5 +58,7 @@ public interface ConfigRepository {
 
     boolean disablePlayerDataSaving();
 
+    boolean getTriggerWithHitbox();
+
     void importConfig(Config config);
 }

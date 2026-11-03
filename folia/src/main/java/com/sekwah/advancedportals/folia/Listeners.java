@@ -9,6 +9,7 @@ import com.sekwah.advancedportals.shadowed.inject.Inject;
 import com.sekwah.advancedportals.folia.connector.container.FoliaEntityContainer;
 import com.sekwah.advancedportals.folia.connector.container.FoliaPlayerContainer;
 import com.sekwah.advancedportals.folia.utils.ContainerHelpers;
+import io.papermc.paper.event.entity.EntityPortalReadyEvent;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -85,6 +86,26 @@ public class Listeners implements Listener {
                     ContainerHelpers.toPlayerLocation(event.getLocation()))) {
                 event.setCancelled(true);
             }
+        }
+    }
+
+    /**
+     * Fired as soon as an entity is ready to use a vanilla portal, before the
+     * server looks for (or builds!) the portal on the other side. Cancelling
+     * it here for entities inside a portal region saves all of that work. (The
+     * later entity portal event is still handled as a fallback)
+     *
+     * <p>Players are left to the portal enter/portal events as those also
+     * activate the portals.
+     */
+    @EventHandler(ignoreCancelled = true)
+    public void onEntityPortalReady(EntityPortalReadyEvent event) {
+        if (event.getEntity() instanceof Player) {
+            return;
+        }
+        if (!this.coreListeners.entityPortalEvent(
+                new FoliaEntityContainer(event.getEntity()))) {
+            event.setCancelled(true);
         }
     }
 

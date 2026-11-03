@@ -2,6 +2,8 @@ package com.sekwah.advancedportals.core.commands.subcommands.common;
 
 import com.google.inject.Inject;
 import com.sekwah.advancedportals.core.connector.containers.CommandSenderContainer;
+import com.sekwah.advancedportals.core.connector.containers.EditorForm;
+import com.sekwah.advancedportals.core.connector.containers.PlayerContainer;
 import com.sekwah.advancedportals.core.registry.TagTarget;
 import com.sekwah.advancedportals.core.serializeddata.DataTag;
 import com.sekwah.advancedportals.core.util.Lang;
@@ -50,7 +52,7 @@ public abstract class EditTaggedSubCommand extends CreateTaggedSubCommand {
 
     @Override
     public void onCommand(CommandSenderContainer sender, String[] args) {
-        if (args.length < 3) {
+        if (args.length < 2) {
             sender.sendMessage(Lang.getNegativePrefix()
                                + Lang.translate(usageKey()));
             return;
@@ -61,6 +63,12 @@ public abstract class EditTaggedSubCommand extends CreateTaggedSubCommand {
             sender.sendMessage(Lang.getNegativePrefix()
                                + Lang.translateInsertVariables(notFoundKey(),
                                                                args[1]));
+            return;
+        }
+
+        if (args.length < 3) {
+            // No tags given: open the click through editor if there is one
+            this.openEditor(sender, target);
             return;
         }
 
@@ -105,6 +113,15 @@ public abstract class EditTaggedSubCommand extends CreateTaggedSubCommand {
             }
         }
 
+        this.applyEdit(sender, target, request);
+    }
+
+    /**
+     * Applies, saves and reports an edit. Shared by the command and the
+     * click through editor.
+     */
+    protected void applyEdit(CommandSenderContainer sender, TagTarget target,
+                             TagEditor.EditRequest request) {
         TagEditor.Snapshot snapshot =
             this.tagEditor.apply(target, sender, request);
         if (snapshot == null) {
@@ -130,6 +147,101 @@ public abstract class EditTaggedSubCommand extends CreateTaggedSubCommand {
                                "command.edit.complete", target.getName()));
         sender.sendMessage(Lang.translate("command.create.tags"));
         TagReader.printArgs(sender, target.getArgs());
+    }
+
+    /**
+     * Shows a text field per tag. Only the fields that were changed are
+     * applied, and an emptied field removes the tag.
+     */
+    private void openEditor(CommandSenderContainer sender, TagTarget target) {
+        PlayerContainer player = sender.getPlayerContainer();
+        if (player == null) {
+            sender.sendMessage(Lang.getNegativePrefix()
+                               + Lang.translate(usageKey()));
+            return;
+        }
+
+        final String targetName = target.getName();
+        final Map<String, Tag> tagsByName = new LinkedHashMap<>();
+        final Map<String, String> initialValues = new HashMap<>();
+
+        List<Tag> tags = new ArrayList<>(this.getRelatedTags());
+        tags.sort(Comparator.comparing(Tag::getName));
+
+        EditorForm form = new EditorForm(
+            Lang.translateInsertVariables("command.edit.gui.title", targetName),
+            Lang.translate("command.edit.gui.hint"),
+            Lang.translate("command.edit.gui.save"),
+            Lang.translate("command.edit.gui.cancel"),
+            (submitter, values) -> {
+                TagTarget current = this.findTarget(targetName);
+                if (current == null) {
+                    submitter.sendMessage(Lang.getNegativePrefix()
+                                          + Lang.translate("command.edit.gui.gone"));
+                    return;
+                }
+                TagEditor.EditRequest request = new TagEditor.EditRequest();
+                for (Map.Entry<String, Tag> entry : tagsByName.entrySet()) {
+                    String name = entry.getKey();
+                    String text = values.getOrDefault(name, "").trim();
+                    if (text.equals(initialValues.get(name).trim())) {
+                        continue;
+                    }
+                    if (text.isEmpty()) {
+                        request.remove.add(new DataTag(name));
+                        continue;
+                    }
+                    Tag tag = entry.getValue();
+                    String splitString = tag instanceof Tag.Split
+                        ? ((Tag.Split) tag).splitString()
+                        : null;
+                    List<String> parts = new ArrayList<>();
+                    if (splitString != null) {
+                        for (String part :
+                             text.split(Pattern.quote(splitString))) {
+                            if (!part.trim().isEmpty()) {
+                                parts.add(part.trim());
+                            }
+                        }
+                    } else {
+                        parts.add(text);
+                    }
+                    request.set.add(
+                        new DataTag(name, parts.toArray(new String[0])));
+                }
+                if (request.isEmpty()) {
+                    submitter.sendMessage(Lang.getNegativePrefix()
+                                          + Lang.translate("command.edit.nochange"));
+                    return;
+                }
+                // Removing something that was never there would be rejected
+                request.remove.removeIf(
+                    removal -> current.getArgValues(removal.NAME) == null);
+                this.applyEdit(sender, current, request);
+            });
+
+        for (Tag tag : tags) {
+            if (tag.getName().equals("name")) {
+                continue;
+            }
+            String[] current = target.getArgValues(tag.getName());
+            String splitString = tag instanceof Tag.Split
+                ? ((Tag.Split) tag).splitString()
+                : null;
+            String initial = current == null
+                ? ""
+                : String.join(splitString == null ? "," : splitString, current);
+            tagsByName.put(tag.getName(), tag);
+            initialValues.put(tag.getName(), initial);
+            form.fields.add(
+                new EditorForm.Field(tag.getName(), tag.getName(), initial));
+        }
+
+        if (!player.showEditor(form)) {
+            sender.sendMessage(Lang.getNegativePrefix()
+                               + Lang.translate("command.edit.gui.unsupported"));
+            sender.sendMessage(Lang.translate(usageKey()));
+        }
     }
 
     /**

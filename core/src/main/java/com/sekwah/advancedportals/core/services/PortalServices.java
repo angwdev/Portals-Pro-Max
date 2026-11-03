@@ -205,14 +205,27 @@ public class PortalServices {
         PlayerContainer player, @Nullable PlayerLocation fromLoc,
         PlayerLocation toLoc, TriggerType triggerType) {
         final String worldName = toLoc.getWorldName();
-        final int x = (int) Math.floor(toLoc.getPosX());
-        final int z = (int) Math.floor(toLoc.getPosZ());
+
+        // By default only the exact column the player is standing in counts.
+        // With use-hitbox every block the players hitbox touches counts, like
+        // vanilla portals.
+        final double halfWidth = configRepository.getTriggerWithHitbox()
+            ? Math.max(0, player.getWidth() / 2)
+            : 0;
+        final int minX = (int) Math.floor(toLoc.getPosX() - halfWidth);
+        final int maxX = Math.max(
+            minX,
+            (int) Math.floor(toLoc.getPosX() + halfWidth - HITBOX_EPSILON));
+        final int minZ = (int) Math.floor(toLoc.getPosZ() - halfWidth);
+        final int maxZ = Math.max(
+            minZ,
+            (int) Math.floor(toLoc.getPosZ() + halfWidth - HITBOX_EPSILON));
 
         // Fast path for the overwhelming majority of movement: there is no
         // portal anywhere in this chunk so there is no need to touch the world
         // or the players data beyond clearing their "in portal" state.
         final AdvancedPortal[] candidates =
-            this.index.inChunkOf(worldName, x, z);
+            this.candidatesFor(worldName, minX, maxX, minZ, maxZ);
 
         PlayerData playerData = playerDataServices.getPlayerData(player);
 
@@ -229,15 +242,17 @@ public class PortalServices {
         }
 
         // The players hitbox can touch up to 3 blocks vertically. Previously
-        // only the feet block and (feet block + floor(height)) were checked
-        // which looked at the wrong block for the head whenever the player
-        // wasn't standing exactly on a block boundary.
+        // only the feet and (feet block + floor(height)) were checked which
+        // looked at the wrong block for the head whenever the player wasn't
+        // standing exactly on a block boundary.
         final double height = player.getHeight();
         final int feetY = (int) Math.floor(toLoc.getPosY());
         final int topY = Math.max(
             feetY,
             (int) Math.floor(toLoc.getPosY() + height - HITBOX_EPSILON));
         final int levels = topY - feetY + 1;
+        final int sizeX = maxX - minX + 1;
+        final int sizeZ = maxZ - minZ + 1;
 
         WorldContainer world = null;
         String[] materials = null;
@@ -247,28 +262,35 @@ public class PortalServices {
             boolean triggered = false;
             boolean checkWaterLogged = portal.isTriggerBlock("water");
 
-            for (int i = 0; i < levels && !triggered; i++) {
-                int y = feetY + i;
-                if (!portal.isLocationInPortal(worldName, x, y, z, 0)) {
-                    continue;
-                }
+            for (int ix = 0; ix < sizeX && !triggered; ix++) {
+                for (int iz = 0; iz < sizeZ && !triggered; iz++) {
+                    for (int iy = 0; iy < levels && !triggered; iy++) {
+                        int x = minX + ix;
+                        int z = minZ + iz;
+                        int y = feetY + iy;
+                        if (!portal.isLocationInPortal(worldName, x, y, z, 0)) {
+                            continue;
+                        }
 
-                // Only now do we need to look at the world
-                if (world == null) {
-                    world = player.getWorld();
-                    materials = new String[levels];
-                    waterlogged = new byte[levels];
-                }
-                if (materials[i] == null) {
-                    BlockLocation blockPos =
-                        new BlockLocation(worldName, x, y, z);
-                    materials[i] = world.getBlock(blockPos);
-                    waterlogged[i] =
-                        (byte) (world.isWaterlogged(blockPos) ? 2 : 1);
-                }
+                        // Only now do we need to look at the world
+                        if (world == null) {
+                            world = player.getWorld();
+                            materials = new String[sizeX * sizeZ * levels];
+                            waterlogged = new byte[sizeX * sizeZ * levels];
+                        }
+                        int slot = (ix * sizeZ + iz) * levels + iy;
+                        if (materials[slot] == null) {
+                            BlockLocation blockPos =
+                                new BlockLocation(worldName, x, y, z);
+                            materials[slot] = world.getBlock(blockPos);
+                            waterlogged[slot] =
+                                (byte) (world.isWaterlogged(blockPos) ? 2 : 1);
+                        }
 
-                triggered = portal.isTriggerBlock(materials[i])
-                    || (checkWaterLogged && waterlogged[i] == 2);
+                        triggered = portal.isTriggerBlock(materials[slot])
+                            || (checkWaterLogged && waterlogged[slot] == 2);
+                    }
+                }
             }
 
             if (!triggered) {
@@ -300,6 +322,24 @@ public class PortalServices {
             playerData.setNotInPortal();
         }
         return PortalActivationResult.NOT_IN_PORTAL;
+    }
+
+    /**
+     * The portals that could contain a block in the given columns. Almost
+     * always a single chunk so the shared array of the index is returned.
+     */
+    private AdvancedPortal[] candidatesFor(String worldName, int minX,
+                                           int maxX, int minZ, int maxZ) {
+        final PortalIndex index = this.index;
+        AdvancedPortal[] first = index.inChunkOf(worldName, minX, minZ);
+        if ((minX >> 4) == (maxX >> 4) && (minZ >> 4) == (maxZ >> 4)) {
+            return first;
+        }
+        Set<AdvancedPortal> merged = new LinkedHashSet<>(Arrays.asList(first));
+        merged.addAll(Arrays.asList(index.inChunkOf(worldName, maxX, minZ)));
+        merged.addAll(Arrays.asList(index.inChunkOf(worldName, minX, maxZ)));
+        merged.addAll(Arrays.asList(index.inChunkOf(worldName, maxX, maxZ)));
+        return merged.toArray(new AdvancedPortal[0]);
     }
 
     public List<String> getPortalNames() {

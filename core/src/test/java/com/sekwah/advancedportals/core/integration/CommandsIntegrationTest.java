@@ -338,6 +338,86 @@ class CommandsIntegrationTest {
     }
 
     @Test
+    void editWithoutTagsOpensTheEditorAndAppliesOnlyChangedFields() {
+        player.supportsEditor = true;
+        desti("create", "spawn");
+        portal("create", "p1", "triggerblock:NETHER_PORTAL", "destination:spawn",
+               "cooldown:5");
+
+        portal("edit", "p1");
+
+        assertNotNull(player.form);
+        assertTrue(player.form.title.contains("p1"));
+        var names = new ArrayList<String>();
+        for (var field : player.form.fields) names.add(field.name);
+        assertFalse(names.contains("name"));
+        assertTrue(names.contains("destination") && names.contains("cooldown"));
+
+        Map<String, String> values = new HashMap<>();
+        for (var field : player.form.fields) values.put(field.name, field.initial);
+        values.put("cooldown", "");
+        values.put("message", "Hello, there");
+        values.put("destination", "spawn");
+        player.form.onSubmit.accept(player.container(), values);
+
+        AdvancedPortal portal = portals.getPortal("p1");
+        assertNull(portal.getArgValues("cooldown"));
+        assertEquals("Hello, there", join(portal.getArgValues("message")));
+        assertEquals("spawn", join(portal.getArgValues("destination")));
+        reloadFromDisk();
+        assertEquals("Hello, there", join(portals.getPortal("p1").getArgValues("message")));
+    }
+
+    @Test
+    void editorSubmitWithNoChangesDoesNothing() {
+        player.supportsEditor = true;
+        portal("create", "p1", "triggerblock:NETHER_PORTAL");
+        portal("edit", "p1");
+        Map<String, String> values = new HashMap<>();
+        for (var field : player.form.fields) values.put(field.name, field.initial);
+
+        sender.messages.clear();
+        player.form.onSubmit.accept(player.container(), values);
+
+        assertTrue(sender.all().contains("Nothing was changed"), sender.all());
+    }
+
+    @Test
+    void editWithoutTagsExplainsWhenTheEditorIsNotAvailable() {
+        portal("create", "p1", "triggerblock:NETHER_PORTAL");
+        sender.messages.clear();
+
+        portal("edit", "p1");
+
+        assertTrue(sender.all().contains("Paper"), sender.all());
+    }
+
+    @Test
+    void highlightAsksThePlatformToOutlineThePortal() {
+        player.supportsHighlight = true;
+        portal("create", "p1", "triggerblock:NETHER_PORTAL");
+        player.highlighted.clear();
+
+        portal("highlight", "p1", "30");
+
+        assertEquals(1, player.highlighted.size());
+        assertEquals(1, player.highlighted.get(0)[1].getPosX());
+        assertTrue(sender.all().contains("30"), sender.all());
+    }
+
+    @Test
+    void keepVelocityOnlyAcceptsBooleans() {
+        portal("create", "p1", "triggerblock:NETHER_PORTAL", "keepvelocity:true");
+        assertEquals("true", join(portals.getPortal("p1").getArgValues("keepvelocity")));
+
+        portal("edit", "p1", "momentum:maybe");
+        assertEquals("true", join(portals.getPortal("p1").getArgValues("keepvelocity")));
+
+        portal("edit", "p1", "momentum:false");
+        assertEquals("false", join(portals.getPortal("p1").getArgValues("keepvelocity")));
+    }
+
+    @Test
     void consoleCanEditToo() {
         portal("create", "p1", "triggerblock:NETHER_PORTAL");
         FakeSender console = new FakeSender();

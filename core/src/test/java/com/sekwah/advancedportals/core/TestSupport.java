@@ -179,6 +179,12 @@ public final class TestSupport {
         public final List<String> messages = new ArrayList<>();
         public Vector velocity;
         public double height = 1.8;
+        public double width = 0.6;
+        /** Set to make showEditor succeed and record the form */
+        public boolean supportsEditor = false;
+        public com.sekwah.advancedportals.core.connector.containers.EditorForm form;
+        public final List<BlockLocation[]> highlighted = new ArrayList<>();
+        public boolean supportsHighlight = false;
         public GameMode gameMode = GameMode.SURVIVAL;
         public String name = "Tester";
         public boolean op = true;
@@ -197,6 +203,16 @@ public final class TestSupport {
             Map<String, java.util.function.Function<Object[], Object>> a = new HashMap<>();
             a.put("getUUID", args -> uuid);
             a.put("getHeight", args -> height);
+            a.put("getWidth", args -> width);
+            a.put("getWorldName", args -> location.getWorldName());
+            a.put("showEditor", args -> {
+                form = (com.sekwah.advancedportals.core.connector.containers.EditorForm) args[0];
+                return supportsEditor;
+            });
+            a.put("highlightRegion", args -> {
+                highlighted.add(new BlockLocation[] {(BlockLocation) args[0], (BlockLocation) args[1]});
+                return supportsHighlight;
+            });
             a.put("getGameMode", args -> gameMode);
             a.put("getLoc", args -> location);
             a.put("getName", args -> name);

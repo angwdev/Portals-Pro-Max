@@ -2,6 +2,7 @@ package com.sekwah.advancedportals.folia.connector.container;
 
 import com.sekwah.advancedportals.core.AdvancedPortalsCore;
 import com.sekwah.advancedportals.core.connector.containers.EntityContainer;
+import com.sekwah.advancedportals.core.connector.containers.TeleportOption;
 import com.sekwah.advancedportals.core.connector.containers.WorldContainer;
 import com.sekwah.advancedportals.core.serializeddata.BlockLocation;
 import com.sekwah.advancedportals.core.serializeddata.PlayerLocation;
@@ -12,6 +13,8 @@ import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.event.player.PlayerTeleportEvent;
+import io.papermc.paper.entity.TeleportFlag;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -71,6 +74,37 @@ public class FoliaEntityContainer implements EntityContainer {
      * @return true if the teleport was started. Use {@link #teleportAsync} to
      *     find out if it finished.
      */
+    @Override
+    public double getWidth() {
+        return this.entity.getWidth();
+    }
+
+    /**
+     * Same as {@link #teleportAsync(PlayerLocation)} but keeps the momentum of
+     * the entity when {@link TeleportOption#KEEP_VELOCITY} is set.
+     */
+    @Override
+    public CompletableFuture<Boolean> teleportAsync(
+        PlayerLocation location, Set<TeleportOption> options) {
+        if (!options.contains(TeleportOption.KEEP_VELOCITY)) {
+            return this.teleportAsync(location);
+        }
+        World world = Bukkit.getWorld(location.getWorldName());
+        if (world == null) {
+            return CompletableFuture.completedFuture(false);
+        }
+        return this.entity
+            .teleportAsync(new Location(world, location.getPosX(),
+                                        location.getPosY(), location.getPosZ(),
+                                        location.getYaw(), location.getPitch()),
+                           PlayerTeleportEvent.TeleportCause.PLUGIN,
+                           TeleportFlag.Relative.VELOCITY_X,
+                           TeleportFlag.Relative.VELOCITY_Y,
+                           TeleportFlag.Relative.VELOCITY_Z,
+                           TeleportFlag.Relative.VELOCITY_ROTATION)
+            .exceptionally(throwable -> false);
+    }
+
     @Override
     public boolean teleport(PlayerLocation location) {
         if (Bukkit.getWorld(location.getWorldName()) == null) {

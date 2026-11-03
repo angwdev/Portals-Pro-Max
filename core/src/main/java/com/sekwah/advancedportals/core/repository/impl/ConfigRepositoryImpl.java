@@ -160,6 +160,11 @@ public class ConfigRepositoryImpl implements ConfigRepository {
     }
 
     @Override
+    public boolean getTriggerWithHitbox() {
+        return this.config.triggerWithHitbox;
+    }
+
+    @Override
     public void storeConfig() {
         this.dataStorage.storeFile(this.config, "config.yaml");
     }

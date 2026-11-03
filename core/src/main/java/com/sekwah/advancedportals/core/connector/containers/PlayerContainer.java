@@ -1,5 +1,7 @@
 package com.sekwah.advancedportals.core.connector.containers;
 
+import com.sekwah.advancedportals.core.serializeddata.BlockLocation;
+import com.sekwah.advancedportals.core.serializeddata.PlayerLocation;
 import com.sekwah.advancedportals.core.serializeddata.Vector;
 import java.awt.*;
 import java.util.UUID;
@@ -30,6 +32,35 @@ public interface PlayerContainer extends EntityContainer, HasPermission {
     void runTask(Runnable runnable);
 
     ServerContainer getServer();
+
+    /**
+     * Shows a form to the player.
+     *
+     * @return false if the platform can't show forms (nothing was shown)
+     */
+    default boolean showEditor(EditorForm form) {
+        return false;
+    }
+
+    /**
+     * Outlines a region with a glowing box that only this player can see.
+     *
+     * @param ticks how long it stays
+     * @return false if the platform can't do it (nothing was shown)
+     */
+    default boolean highlightRegion(BlockLocation min, BlockLocation max,
+                                    int ticks) {
+        return false;
+    }
+
+    /**
+     * Marks a position with a glowing box that only this player can see.
+     *
+     * @return false if the platform can't do it (nothing was shown)
+     */
+    default boolean highlightPoint(PlayerLocation location, int ticks) {
+        return false;
+    }
 
     GameMode getGameMode();
 

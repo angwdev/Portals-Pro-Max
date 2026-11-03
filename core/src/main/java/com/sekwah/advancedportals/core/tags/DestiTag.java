@@ -3,6 +3,7 @@ package com.sekwah.advancedportals.core.tags;
 import com.google.inject.Inject;
 import com.sekwah.advancedportals.core.connector.containers.PlayerContainer;
 import com.sekwah.advancedportals.core.connector.containers.ServerContainer;
+import com.sekwah.advancedportals.core.connector.containers.TeleportOption;
 import com.sekwah.advancedportals.core.destination.Destination;
 import com.sekwah.advancedportals.core.effect.WarpEffect;
 import com.sekwah.advancedportals.core.registry.TagRegistry;
@@ -14,7 +15,9 @@ import com.sekwah.advancedportals.core.services.DestinationServices;
 import com.sekwah.advancedportals.core.util.Lang;
 import com.sekwah.advancedportals.core.warphandler.ActivationData;
 import com.sekwah.advancedportals.core.warphandler.Tag;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.Random;
 
@@ -182,8 +185,13 @@ public class DestiTag implements Tag.Activation, Tag.AutoComplete, Tag.Split {
         // not arrived yet when this returns, so everything that needs to
         // happen "at the destination" waits on the future. On the others it
         // is already completed so this behaves exactly as before.
+        Set<TeleportOption> options = EnumSet.noneOf(TeleportOption.class);
+        if ("true".equals(
+                activationData.getMetadata(KeepVelocityTag.TAG_NAME))) {
+            options.add(TeleportOption.KEEP_VELOCITY);
+        }
         CompletableFuture<Boolean> teleport =
-            player.teleportAsync(destination.getLoc());
+            player.teleportAsync(destination.getLoc(), options);
         activationData.setTeleportFuture(teleport);
 
         for (DataTag destiTag : destination.getArgs()) {

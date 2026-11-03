@@ -68,6 +68,7 @@ public class MovePortalSubCommand implements SubCommand {
                            + Lang.translateInsertVariables(
                                "command.portal.move.complete",
                                portal.getName()));
+        player.highlightRegion(portal.getMinLoc(), portal.getMaxLoc(), 100);
     }
 
     @Override

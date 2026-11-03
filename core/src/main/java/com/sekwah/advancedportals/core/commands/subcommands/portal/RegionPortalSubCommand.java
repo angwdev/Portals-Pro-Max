@@ -53,6 +53,8 @@ public class RegionPortalSubCommand implements SubCommand {
                            + Lang.translateInsertVariables(
                                "command.portal.region.loaded",
                                portal.getName()));
+        // Shows the region being edited where supported (Paper)
+        player.highlightRegion(portal.getMinLoc(), portal.getMaxLoc(), 200);
     }
 
     @Override

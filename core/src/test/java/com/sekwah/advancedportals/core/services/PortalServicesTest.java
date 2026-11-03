@@ -271,6 +271,51 @@ class PortalServicesTest {
         assertFalse(services.removePortal("a", null));
     }
 
+    private void useHitbox() {
+        config = TestSupport.config(Map.of("getThrowbackStrength", 0.7,
+                                           "getTriggerWithHitbox", true));
+        services = TestSupport.portalServices(repo, config, playerData, registry);
+    }
+
+    @Test
+    void hitboxModeTriggersWhenOnlyTheEdgeOfThePlayerTouches() {
+        useHitbox();
+        addPortal("a", 1, 64, 0, 1, 64, 0, "accept");
+        blockAt(1, 64, 0, "NETHER_PORTAL");
+
+        // Centre is in block 0 but the 0.6 wide hitbox reaches 1.1
+        assertEquals(PortalActivationResult.PORTAL_ACTIVATED, move(0.8, 64, 0.5));
+    }
+
+    @Test
+    void hitboxModeStillIgnoresPlayersThatAreClear() {
+        useHitbox();
+        addPortal("a", 1, 64, 0, 1, 64, 0, "accept");
+        blockAt(1, 64, 0, "NETHER_PORTAL");
+
+        // hitbox is 0.5 -> 1.1 but 0.69 -> 0.99 does not reach block 1
+        assertEquals(PortalActivationResult.NOT_IN_PORTAL, move(0.69, 64, 0.5));
+        assertEquals(PortalActivationResult.NOT_IN_PORTAL, move(2.5, 64, 0.5));
+    }
+
+    @Test
+    void hitboxModeFindsPortalsInTheNeighbouringChunk() {
+        useHitbox();
+        addPortal("a", 16, 64, 0, 16, 64, 0, "accept");
+        blockAt(16, 64, 0, "NETHER_PORTAL");
+
+        // Centre is in chunk 0, the hitbox reaches into chunk 1
+        assertEquals(PortalActivationResult.PORTAL_ACTIVATED, move(15.9, 64, 0.5));
+    }
+
+    @Test
+    void centreModeIgnoresTheHitbox() {
+        addPortal("a", 1, 64, 0, 1, 64, 0, "accept");
+        blockAt(1, 64, 0, "NETHER_PORTAL");
+
+        assertEquals(PortalActivationResult.NOT_IN_PORTAL, move(0.8, 64, 0.5));
+    }
+
     @Test
     void lookupsIgnoreCase() {
         AdvancedPortal portal = addPortal("MyPortal", 0, 64, 0, 1, 65, 1);

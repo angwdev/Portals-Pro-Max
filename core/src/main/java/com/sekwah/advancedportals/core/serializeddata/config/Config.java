@@ -47,4 +47,11 @@ public class Config {
     public boolean disableGatewayBeam = true;
 
     public boolean disablePlayerDataSaving = false;
+
+    /**
+     * If true a portal triggers as soon as any part of the players hitbox
+     * touches a trigger block (like vanilla portals) instead of only the
+     * block the players position is in.
+     */
+    public boolean triggerWithHitbox = false;
 }

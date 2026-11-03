@@ -47,6 +47,11 @@ public class LegacySpigotEntityContainer implements EntityContainer {
     }
 
     @Override
+    public double getWidth() {
+        return this.entity.getWidth();
+    }
+
+    @Override
     public boolean teleport(PlayerLocation location) {
         World world = Bukkit.getWorld(location.getWorldName());
         if (world == null) {

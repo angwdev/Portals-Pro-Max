@@ -1,19 +1,22 @@
 package com.sekwah.advancedportals.folia.connector.container;
 
 import com.sekwah.advancedportals.core.AdvancedPortalsCore;
+import com.sekwah.advancedportals.core.connector.containers.EditorForm;
 import com.sekwah.advancedportals.core.connector.containers.GameMode;
 import com.sekwah.advancedportals.core.connector.containers.PlayerContainer;
 import com.sekwah.advancedportals.core.connector.containers.ServerContainer;
+import com.sekwah.advancedportals.core.serializeddata.BlockLocation;
 import com.sekwah.advancedportals.core.serializeddata.PlayerLocation;
 import com.sekwah.advancedportals.core.serializeddata.Vector;
 import com.sekwah.advancedportals.core.util.Lang;
 import com.sekwah.advancedportals.shadowed.inject.Inject;
 import com.sekwah.advancedportals.folia.AdvancedPortalsPlugin;
+import com.sekwah.advancedportals.folia.paper.PaperDialogs;
+import com.sekwah.advancedportals.folia.paper.PaperHighlights;
+import com.sekwah.advancedportals.folia.paper.PaperText;
 import java.awt.*;
 import java.util.Arrays;
 import java.util.UUID;
-import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -65,8 +68,40 @@ public class FoliaPlayerContainer
 
     @Override
     public void sendActionBar(String message) {
-        player.spigot().sendMessage(ChatMessageType.ACTION_BAR,
-                                    TextComponent.fromLegacyText(message));
+        player.sendActionBar(PaperText.legacy(message));
+    }
+
+    /**
+     * Shown with the Paper dialog API. Servers older than 1.21.6 don't have
+     * it, in that case the command falls back to its text help.
+     */
+    @Override
+    public boolean showEditor(EditorForm form) {
+        try {
+            PaperDialogs.show(this.player, this, form);
+            return true;
+        } catch (LinkageError e) {
+            return false;
+        }
+    }
+
+    @Override
+    public boolean highlightRegion(BlockLocation min, BlockLocation max,
+                                   int ticks) {
+        try {
+            return PaperHighlights.region(this.player, min, max, ticks);
+        } catch (LinkageError e) {
+            return false;
+        }
+    }
+
+    @Override
+    public boolean highlightPoint(PlayerLocation location, int ticks) {
+        try {
+            return PaperHighlights.point(this.player, location, ticks);
+        } catch (LinkageError e) {
+            return false;
+        }
     }
 
     @Override
