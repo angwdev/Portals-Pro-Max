@@ -1,0 +1,93 @@
+name: Build
+
+on:
+  push:
+    branches-ignore:
+      - renovate/**
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Core, Spigot and legacy Spigot are built for Java 17, the Paper/Folia build
+  # needs Java 25. Make both available to the Gradle toolchains.
+  GRADLE_TOOLCHAIN_ARGS: -Porg.gradle.java.installations.fromEnv=JAVA_HOME_17_X64,JAVA_HOME_25_X64
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: |
+            17
+            25
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Run the unit and command tests
+        run: ./gradlew :core:test $GRADLE_TOOLCHAIN_ARGS --stacktrace
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: core/build/reports/tests/test
+          retention-days: 7
+
+  build:
+    name: Build ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Paper 26.3 / Folia
+            project: folia
+          - name: Spigot
+            project: spigot
+          - name: Legacy Spigot
+            project: legacyspigot
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: |
+            17
+            25
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build the plugin jar
+        run: ./gradlew :${{ matrix.project }}:jar $GRADLE_TOOLCHAIN_ARGS --stacktrace
+      - name: Upload the plugin jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: advanced-portals-${{ matrix.project }}
+          path: ${{ matrix.project }}/build/libs/*.jar
+          if-no-files-found: error
+          retention-days: 30
+
+  paper-smoke-test:
+    name: Paper 26.3 server start
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+      - uses: actions/download-artifact@v4
+        with:
+          name: advanced-portals-folia
+          path: plugin
+      - name: Start Paper with the plugin and run a few commands
+        run: .github/scripts/paper-smoke-test.sh "$(ls plugin/*.jar | head -n 1)" 26.3

@@ -186,7 +186,9 @@ generateTemplates.configure {
 sourceSets.main.resources.srcDir(generateTemplates.map { it.outputs })
 
 tasks.register('launchMinecraftServer', LaunchMinecraftServerTask) {
-    jarUrl.set({ 'https://fill-data.papermc.io/v1/objects/607afd1c3320008e1ffd2eaee6780ace4419d5f8c527b75e79f259be79ebf57b/folia-26.1.2-8.jar' } as JarUrl)
+    // Paper 26.3 for development. To test on Folia use the folia jar from
+    // https://papermc.io/downloads/folia instead.
+    jarUrl.set({ 'https://fill-data.papermc.io/v1/objects/989f93c29d5b61fe52804f834ea6b3a0a5775d05412e238ec78107197a6b5be6/paper-26.3-238.jar' } as JarUrl)
     jvmArgument.set(["-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005", "-DIReallyKnowWhatIAmDoingISwear=true"])
     agreeEula.set(true)
 }
@@ -197,6 +199,7 @@ supportedVersions = [
         "26.1",
         "26.1.1",
         "26.1.2",
+        "26.3",
 ]
 
 
@@ -205,10 +208,10 @@ modrinth {
     projectId = project.modrinth_slug
     versionType = "alpha"
     uploadFile = jar
-    loaders = ["velocity", "waterfall", "bungeecord", "folia"]
+    loaders = ["paper", "folia", "velocity", "waterfall", "bungeecord"]
     gameVersions = supportedVersions
     changelog = getReleaseChangelog()
-    versionName = "Folia [MC 26+] " + getVersion()
+    versionName = "Paper/Folia [MC 26+] " + getVersion()
     versionNumber = getVersion() + "-folia"
     syncBodyFrom = rootProject.file("README.md").text
 }
