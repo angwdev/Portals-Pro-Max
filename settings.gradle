@@ -1,13 +1,11 @@
-rootProject.name = "advanced-portals"
+rootProject.name = "portals-pro-max"
 // Core modules
 include 'core'
 include 'proxycore'
 include 'lang'
 
 // Implementations
-include 'spigot'
-include 'legacyspigot'
-include 'folia'
+include 'paper'
 
 // Proxies
 include 'velocity'

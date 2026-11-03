@@ -40,11 +40,11 @@ translatedata.replacecommand= Use &e/portal langupdate&c para copiar um novo arq
 translatedata.replaced= Um novo arquivo &een_GB&a foi copiado para a pasta de dados.
 translatedata.updated= Arquivo de idioma recarregado. &e%1$s &atraduções foram adicionadas. Se quiser redefinir o arquivo, use "&elangupdate overwrite&a".
 
-messageprefix.positive=&a[&eAdvancedPortals&a]
-messageprefix.negative=&c[&7AdvancedPortals&c]
+messageprefix.positive=&a[&ePortalsProMax&a]
+messageprefix.negative=&c[&7PortalsProMax&c]
 
-logger.pluginenable=Advanced Portals foi ativado!
-logger.plugindisable=Advanced Portals está sendo desativado!
+logger.pluginenable=Portals Pro Max foi ativado!
+logger.plugindisable=Portals Pro Max está sendo desativado!
 logger.plugincrafterror=Esta versão do craftbukkit ainda não é compatível ou algo deu errado. Por favor, poste esta mensagem com o número da versão e o stacktrace acima em um problema no GitHub v:%1$s
 
 command.noargs= Desculpe, mas você precisa especificar um subcomando. Use &e/%1$s help &cse quiser uma lista de subcomandos possíveis.
@@ -56,7 +56,7 @@ command.help.invalidhelp= Desculpe, mas &e%1$s&c não é um número de página o
 
 command.reload.help=Recarrega os dados dos portais
 command.reload.detailedhelp=Recarrega todos os dados dos portais a partir dos arquivos na pasta de dados
-command.reload.reloaded= Todos os dados do Advanced Portals foram recarregados. Alguns valores de configuração podem precisar de uma reinicialização completa do servidor ou recarregamento do plugin para surtirem efeito.
+command.reload.reloaded= Todos os dados do Portals Pro Max foram recarregados. Alguns valores de configuração podem precisar de uma reinicialização completa do servidor ou recarregamento do plugin para surtirem efeito.
 
 command.create.help=Cria portais
 command.create.error= Ocorreu um problema ao criar o portal.

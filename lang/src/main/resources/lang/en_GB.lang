@@ -40,8 +40,8 @@ translatedata.replacecommand= Use &e/portal langupdate&c to copy out a new defau
 translatedata.replaced= A new &een_GB&a file has been copied to the data folder.
 translatedata.updated= Lang file reloaded. &e%1$s &atranslations have been added. If you want to reset the file, Please use "&elangupdate overwrite&a".
 
-messageprefix.positive=&a[&eAdvancedPortals&a]
-messageprefix.negative=&c[&7AdvancedPortals&c]
+messageprefix.positive=&a[&ePortalsProMax&a]
+messageprefix.negative=&c[&7PortalsProMax&c]
 
 logger.pluginenable=Advanced portals have been enabled!
 logger.plugindisable=Advanced portals are being disabled!
@@ -56,7 +56,7 @@ command.help.invalidhelp= Sorry but &e%1$s&c is not a valid page number or sub c
 
 command.reload.help=Reloads portal data
 command.reload.detailedhelp=Reloads all portal data from files in the data folder
-command.reload.reloaded= All Advanced Portals data reloaded. Some config values may need a full server restart or a plugin reload to take effect.
+command.reload.reloaded= All Portals Pro Max data reloaded. Some config values may need a full server restart or a plugin reload to take effect.
 
 command.create.help=Creates portals
 command.create.error= There was a problem making the portal.
@@ -292,3 +292,8 @@ command.destination.highlight.detailedhelp=/desti highlight <name> [seconds] - s
 command.destination.highlight.done= Highlighting &e%1$s &afor &e%2$s &aseconds.
 command.destination.highlight.unsupported= Highlighting needs Paper and the destination has to be near you. Use &e/desti show &cinstead.
 command.destination.highlight.toofar= That destination is too far away or in another world.
+
+# Selecting without the axe (touch screens, gamepads, Bedrock)
+command.portal.pos.usage= Usage: /portal pos1|pos2 [x y z] (use ~ for your position)
+command.portal.pos.help=Sets a corner of the selection without the axe
+command.portal.pos.detailedhelp=/portal pos1 and /portal pos2 set the corners of your selection to the block you are standing in, or to the given coordinates (~ means your own position, ~5 is 5 blocks away). Useful when clicking blocks with the axe is awkward, for example on Bedrock.

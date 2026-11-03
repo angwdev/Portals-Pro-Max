@@ -81,7 +81,7 @@ public class AdvancedPortalsCore {
         this.infoLogger = infoLogger;
 
         int[] mcVersionTemp;
-        infoLogger.info("Loading Advanced Portals Core v"
+        infoLogger.info("Loading Portals Pro Max Core v"
                         + BuildConstants.VERSION + " for MC: " + mcVersion);
         try {
             mcVersionTemp = Arrays.stream(mcVersion.split("\\."))
@@ -195,6 +195,10 @@ public class AdvancedPortalsCore {
                                               new RenamePortalSubCommand());
         this.portalCommand.registerSubCommand("region",
                                               new RegionPortalSubCommand());
+        this.portalCommand.registerSubCommand(
+            "pos1", new PositionPortalSubCommand(true));
+        this.portalCommand.registerSubCommand(
+            "pos2", new PositionPortalSubCommand(false));
         this.portalCommand.registerSubCommand("highlight",
                                               new HighlightPortalSubCommand());
 

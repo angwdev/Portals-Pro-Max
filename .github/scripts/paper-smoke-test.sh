@@ -95,9 +95,9 @@ check_absent() {
   fi
 }
 
-check 'Enabling AdvancedPortals'
-check_absent 'Error occurred while enabling AdvancedPortals'
-check_absent 'Could not load .*plugins/.*advanced-portals'
+check 'Enabling PortalsProMax'
+check_absent 'Error occurred while enabling PortalsProMax'
+check_absent 'Could not load .*plugins/.*portals-pro-max'
 check_absent 'Unhandled exception executing command .*(portal|desti)'
 check_absent 'at com\.sekwah\.advancedportals'
 

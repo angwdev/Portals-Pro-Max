@@ -418,6 +418,30 @@ class CommandsIntegrationTest {
     }
 
     @Test
+    void positionCommandsSelectWithoutTheAxe() {
+        player.location = new PlayerLocation("world", 10.5, 64, -3.5, 0, 0);
+        PlayerData data = core.getPlayerDataRepository().getPlayerData(player.container());
+
+        portal("pos1");
+        assertEquals(10, data.getPos1().getPosX());
+        assertEquals(-4, data.getPos1().getPosZ());
+
+        portal("pos2", "20", "~1", "~-2");
+        assertEquals(20, data.getPos2().getPosX());
+        assertEquals(65, data.getPos2().getPosY());
+        assertEquals(-6, data.getPos2().getPosZ());
+
+        sender.messages.clear();
+        portal("pos2", "x", "y", "z");
+        assertTrue(sender.all().contains("Usage"), sender.all());
+
+        // and the selection can be turned into a portal
+        portal("create", "p1", "triggerblock:NETHER_PORTAL");
+        assertEquals(10, portals.getPortal("p1").getMinLoc().getPosX());
+        assertEquals(20, portals.getPortal("p1").getMaxLoc().getPosX());
+    }
+
+    @Test
     void consoleCanEditToo() {
         portal("create", "p1", "triggerblock:NETHER_PORTAL");
         FakeSender console = new FakeSender();

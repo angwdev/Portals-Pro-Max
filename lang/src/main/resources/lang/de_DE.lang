@@ -40,10 +40,10 @@ translatedata.translationsoutdated= Einige Übersetzungen von &e%1$s&c sind nich
 translatedata.replacecommand= Verwende &e/portal transupdate&c um eine standard &ede_DE&c Datei zu erstellen.
 translatedata.replaced= Eine neue &ede_DE&a wurde in den ordner kopiert.
 
-messageprefix.positive=&a[&eAdvancedPortals&a]
-messageprefix.negative=&c[&7AdvancedPortals&c]
+messageprefix.positive=&a[&ePortalsProMax&a]
+messageprefix.negative=&c[&7PortalsProMax&c]
 
-logger.pluginenable=Advanced Portals wurde erfolgreich aktiviert!
+logger.pluginenable=Portals Pro Max wurde erfolgreich aktiviert!
 logger.plugindisable=Advanced portals wurde deaktiviert!
 logger.plugincrafterror=Diese Version von Craftbukkit/Spigot wird derzeit nicht unterstützt oder etwas ist schief gelaufen. Bitte melde die diese Nachricht mit der Versionnummer mit dem Log in unserem Github (auf Englisch) v:%1$s
 
@@ -56,7 +56,7 @@ command.help.invalidhelp= &e%1$s&c ist keine gültige Seitennummer oder Sub-Comm
 
 command.reload.help=Ladet die Portal-Dateien neu
 command.reload.detailedhelp=Lade alle Portal-Dateien von den Dateien im Dateiordner neu.
-command.reload.reloaded= Alle Advanced Portals-Daten wurden neu geladen. Einige Konfigurationswerte erfordern möglicherweise einen vollständigen Serverneustart oder ein Plugin-Reload, um wirksam zu werden.
+command.reload.reloaded= Alle Portals Pro Max-Daten wurden neu geladen. Einige Konfigurationswerte erfordern möglicherweise einen vollständigen Serverneustart oder ein Plugin-Reload, um wirksam zu werden.
 
 command.create.help=Erstellt Portale
 command.create.error= Beim Portal erstellen ist ein Fehler aufgetreten:
@@ -107,6 +107,6 @@ portal.selector.poschange=&eDu hast  pos%1$s X:%2$s Y:%3$s Z:%4$s ausgewählt
 
 command.trans.help=Kopiere die Übersetzung, um die Standardeinstellungen wiederherzustellen
 
-command.version.help=Sagt dir die aktuelle Version von Advanced Portals
+command.version.help=Sagt dir die aktuelle Version von Portals Pro Max
 
 command.subcommand.nopermission= Du hast dafür keine Berechigung. Verwende &e/%1$s help &c wenn du eine Liste von möglichen Befehlen sehen möchtest.

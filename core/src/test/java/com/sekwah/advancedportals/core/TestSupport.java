@@ -216,6 +216,7 @@ public final class TestSupport {
             a.put("getGameMode", args -> gameMode);
             a.put("getLoc", args -> location);
             a.put("getName", args -> name);
+            a.put("getBlockLoc", args -> location.toBlockPos());
             a.put("isOp", args -> op);
             a.put("hasPermission", args -> permissions.test((String) args[0]));
             a.put("sendMessage", args -> {

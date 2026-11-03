@@ -1,0 +1,14 @@
+main: com.sekwah.advancedportals.paper.PortalsProMaxPlugin
+name: PortalsProMax
+version: ${pluginVersion}
+authors: [angwdev, sekwah41]
+description: Portals, destinations and warps for Paper, based on Advanced Portals.
+api-version: '26.3'
+folia-supported: true
+website: https://github.com/angwdev/Portals-Pro-Max
+softdepend: [PlaceholderAPI, Vault, floodgate, Geyser-Spigot]
+# The portal and destination commands (and their aliases) are registered
+# with the Brigadier API in PaperCommandRegister.
+# The permission nodes are still advancedportals.* so existing permission
+# setups keep working.
+permissions: ${permissions}
