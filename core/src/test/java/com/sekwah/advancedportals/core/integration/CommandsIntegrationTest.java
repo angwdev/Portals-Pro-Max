@@ -109,6 +109,61 @@ class CommandsIntegrationTest {
     }
 
     @Test
+    void filesFromAnAdvancedPortalsInstallStillLoad() throws Exception {
+        java.nio.file.Files.createDirectories(dataDir.resolve("portals"));
+        java.nio.file.Files.createDirectories(dataDir.resolve("desti"));
+        java.nio.file.Files.createDirectories(dataDir.resolve("lang"));
+        // Files as written by Advanced Portals 2.x: no triggerWithHitbox in the
+        // config, a customised translation with the old prefix
+        java.nio.file.Files.writeString(dataDir.resolve("config.yaml"),
+            "portalProtectionRadius: 9\nthrowbackStrength: 1.5\n"
+            + "translationFile: en_GB\nwarpEffect:\n  enabled: false\n"
+            + "  soundEffect: ender\n  visualEffect: ender\n"
+            + "commandPortals:\n  console: false\n  enabled: true\n  op: true\n"
+            + "  permsWildcard: true\n  proxy: true\n");
+        java.nio.file.Files.writeString(dataDir.resolve("lang/en_GB.lang"),
+            "messageprefix.positive=&a[&eAdvancedPortals&a]\n"
+            + "command.create.complete=Old custom text\n");
+        java.nio.file.Files.writeString(dataDir.resolve("portals/old.yaml"),
+            "args:\n  name:\n  - old\n  destination:\n  - spawn\n"
+            + "  triggerblock:\n  - NETHER_PORTAL\n  cooldown:\n  - '3'\n"
+            + "maxLoc:\n  posX: 5\n  posY: 70\n  posZ: 5\n  worldName: world\n"
+            + "minLoc:\n  posX: 3\n  posY: 68\n  posZ: 3\n  worldName: world\n");
+        java.nio.file.Files.writeString(dataDir.resolve("desti/spawn.yaml"),
+            "args:\n  name:\n  - spawn\n  message:\n  - Welcome\n"
+            + "loc:\n  pitch: 12.5\n  worldName: world\n  x: 1.5\n  y: 64.0\n"
+            + "  yaw: 180.0\n  z: -2.25\n");
+
+        core.loadPortalConfig();
+        portals.loadPortals();
+        destinations.loadDestinations();
+
+        AdvancedPortal old = portals.getPortal("old");
+        assertNotNull(old);
+        assertEquals("spawn", join(old.getArgValues("destination")));
+        assertEquals("3", join(old.getArgValues("cooldown")));
+        assertEquals(3, old.getMinLoc().getPosX());
+        assertEquals("old", portals.inPortalRegionGetName(new BlockLocation("world", 4, 69, 4)));
+        Destination spawn = destinations.getDestination("spawn");
+        assertEquals(1.5, spawn.getLoc().getPosX(), 0);
+        assertEquals(180f, spawn.getLoc().getYaw(), 0);
+        assertEquals("Welcome", join(spawn.getArgValues("message")));
+
+        // Values that were in the old config are kept, new options get their
+        // default and are written to the file for next time
+        assertEquals(9, core.getModule().getInjector().getInstance(
+            com.sekwah.advancedportals.core.repository.ConfigRepository.class).getProtectionRadius());
+        assertFalse(core.getModule().getInjector().getInstance(
+            com.sekwah.advancedportals.core.repository.ConfigRepository.class).getTriggerWithHitbox());
+        assertTrue(java.nio.file.Files.readString(dataDir.resolve("config.yaml")).contains("triggerWithHitbox"));
+
+        // Customised translations still win, keys added since come from the jar
+        com.sekwah.advancedportals.core.util.Lang.loadLanguage("en_GB");
+        assertTrue(com.sekwah.advancedportals.core.util.Lang.translate("command.create.complete").contains("Old custom text"));
+        assertTrue(com.sekwah.advancedportals.core.util.Lang.translate("command.edit.nochange").contains("Nothing was changed"));
+    }
+
+    @Test
     void translationsAreLoaded() {
         portal("create", "p1", "triggerblock:NETHER_PORTAL");
         assertTrue(sender.all().contains("successfully created"), sender.all());
