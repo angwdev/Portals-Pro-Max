@@ -2,6 +2,7 @@ package com.sekwah.advancedportals.core.warphandler;
 
 import com.sekwah.advancedportals.core.serializeddata.PlayerLocation;
 import java.util.HashMap;
+import java.util.concurrent.CompletableFuture;
 import java.util.Map;
 
 /**
@@ -19,6 +20,21 @@ public class ActivationData {
     private final TriggerType triggerType;
 
     private final Map<String, String> metadata = new HashMap<>();
+
+    /**
+     * Set when a tag has started teleporting the player. On platforms with
+     * asynchronous teleports (Paper/Folia) the post activation stage waits for
+     * it so commands, messages and costs happen once the player has arrived.
+     */
+    private volatile CompletableFuture<Boolean> teleportFuture;
+
+    public CompletableFuture<Boolean> getTeleportFuture() {
+        return this.teleportFuture;
+    }
+
+    public void setTeleportFuture(CompletableFuture<Boolean> teleportFuture) {
+        this.teleportFuture = teleportFuture;
+    }
 
     public WarpedStatus getWarped() {
         return this.warpStatus;

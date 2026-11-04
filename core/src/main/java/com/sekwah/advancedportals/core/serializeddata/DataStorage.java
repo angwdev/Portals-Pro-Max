@@ -5,8 +5,12 @@ import com.sekwah.advancedportals.core.AdvancedPortalsCore;
 import com.sekwah.advancedportals.core.util.InfoLogger;
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import org.yaml.snakeyaml.DumperOptions;
@@ -74,8 +78,8 @@ public class DataStorage {
             return null;
         }
         Yaml yaml = getYaml(dataHolder);
-        try (BufferedReader bufReader =
-                 new BufferedReader(new InputStreamReader(yamlResource))) {
+        try (BufferedReader bufReader = new BufferedReader(
+                 new InputStreamReader(yamlResource, StandardCharsets.UTF_8))) {
             return yaml.loadAs(bufReader, dataHolder);
         } catch (Exception e) {
             infoLogger.warning("Failed to load file: " + location);
@@ -90,8 +94,8 @@ public class DataStorage {
 
         // Ensure the file is within the data folder
         try {
-            if (!outFile.getCanonicalPath().startsWith(
-                    this.dataFolder.getCanonicalPath())) {
+            Path dataPath = this.dataFolder.getCanonicalFile().toPath();
+            if (!outFile.getCanonicalFile().toPath().startsWith(dataPath)) {
                 throw new SecurityException(
                     "Attempted to store a file outside the data folder: "
                     + location);
@@ -108,11 +112,30 @@ public class DataStorage {
         }
 
         String yamlFile = yaml.dump(dataHolder);
-        try (FileWriter fileWriter = new FileWriter(outFile)) {
-            fileWriter.write(yamlFile);
+
+        // Write to a temporary file first and then move it over the real one.
+        // Writing straight to the file meant a crash or a full disk half way
+        // through left a truncated (unloadable) portal/destination behind.
+        Path outPath = outFile.toPath();
+        Path tempPath =
+            outPath.resolveSibling(outFile.getName() + ".tmp");
+        try {
+            Files.write(tempPath, yamlFile.getBytes(StandardCharsets.UTF_8));
+            try {
+                Files.move(tempPath, outPath,
+                           StandardCopyOption.REPLACE_EXISTING,
+                           StandardCopyOption.ATOMIC_MOVE);
+            } catch (AtomicMoveNotSupportedException e) {
+                Files.move(tempPath, outPath,
+                           StandardCopyOption.REPLACE_EXISTING);
+            }
             return true;
         } catch (IOException e) {
             infoLogger.error(e);
+            try {
+                Files.deleteIfExists(tempPath);
+            } catch (IOException ignored) {
+            }
         }
         return false;
     }

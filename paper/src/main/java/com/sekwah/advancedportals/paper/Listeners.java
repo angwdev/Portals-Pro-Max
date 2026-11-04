@@ -1,0 +1,305 @@
+package com.sekwah.advancedportals.paper;
+
+import com.sekwah.advancedportals.core.CoreListeners;
+import com.sekwah.advancedportals.core.portal.AdvancedPortal;
+import com.sekwah.advancedportals.core.repository.ConfigRepository;
+import com.sekwah.advancedportals.core.serializeddata.BlockLocation;
+import com.sekwah.advancedportals.core.services.PortalServices;
+import com.sekwah.advancedportals.shadowed.inject.Inject;
+import com.sekwah.advancedportals.paper.connector.container.PaperEntityContainer;
+import com.sekwah.advancedportals.paper.connector.container.PaperPlayerContainer;
+import com.sekwah.advancedportals.paper.utils.ContainerHelpers;
+import io.papermc.paper.event.entity.EntityPortalReadyEvent;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.bukkit.Chunk;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.block.Block;
+import org.bukkit.block.EndGateway;
+import org.bukkit.entity.Player;
+import com.sekwah.advancedportals.paper.utils.SpecialItems;
+import org.bukkit.event.Event;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
+import org.bukkit.event.block.*;
+import org.bukkit.event.entity.*;
+import org.bukkit.event.player.*;
+import org.bukkit.event.world.ChunkLoadEvent;
+import org.bukkit.inventory.ItemStack;
+
+/**
+ * Some of these will be passed to the core listener to handle the events,
+ * others it's easier to just check directly.
+ */
+public class Listeners implements Listener {
+    @Inject
+    private CoreListeners coreListeners;
+
+    @Inject
+    private PortalServices portalServices;
+
+    @Inject
+    private ConfigRepository configRepository;
+
+    // Entity and portal events
+    @EventHandler
+    public void onJoinEvent(PlayerJoinEvent event) {
+        coreListeners.playerJoin(new PaperPlayerContainer(event.getPlayer()));
+    }
+
+    @EventHandler
+    public void onPlayerQuitEvent(PlayerQuitEvent event) {
+        coreListeners.playerLeave(new PaperPlayerContainer(event.getPlayer()));
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onMoveEvent(PlayerMoveEvent event) {
+        Location from = event.getFrom();
+        Location to = event.getTo();
+        // Turning the camera fires this event as often as walking does. It
+        // can't move the player into or out of a portal so skip it.
+        if (to == null
+            || (from.getX() == to.getX() && from.getY() == to.getY()
+                && from.getZ() == to.getZ())) {
+            return;
+        }
+        coreListeners.playerMove(
+            new PaperPlayerContainer(event.getPlayer()),
+            ContainerHelpers.toPlayerLocation(from),
+            ContainerHelpers.toPlayerLocation(to));
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onEntityPortalEvent(EntityPortalEvent event) {
+        if (!this.coreListeners.entityPortalEvent(
+                new PaperEntityContainer(event.getEntity()))) {
+            event.setCancelled(true);
+        }
+    }
+    @EventHandler(ignoreCancelled = true)
+    public void onEntityPortalEnterEvent(EntityPortalEnterEvent event) {
+        if (event.getEntity() instanceof Player player) {
+            if (!this.coreListeners.playerPortalEvent(
+                    new PaperPlayerContainer(player),
+                    ContainerHelpers.toPlayerLocation(event.getLocation()))) {
+                event.setCancelled(true);
+            }
+        }
+    }
+
+    /**
+     * Fired as soon as an entity is ready to use a vanilla portal, before the
+     * server looks for (or builds!) the portal on the other side. Cancelling
+     * it here for entities inside a portal region saves all of that work. (The
+     * later entity portal event is still handled as a fallback)
+     *
+     * <p>Players are left to the portal enter/portal events as those also
+     * activate the portals.
+     */
+    @EventHandler(ignoreCancelled = true)
+    public void onEntityPortalReady(EntityPortalReadyEvent event) {
+        if (event.getEntity() instanceof Player) {
+            return;
+        }
+        if (!this.coreListeners.entityPortalEvent(
+                new PaperEntityContainer(event.getEntity()))) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onPortalEvent(PlayerPortalEvent event) {
+        if (!this.coreListeners.playerPortalEvent(
+                new PaperPlayerContainer(event.getPlayer()),
+                ContainerHelpers.toPlayerLocation(event.getFrom()))) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onDamEvent(EntityDamageEvent event) {
+        if (event.getEntity() instanceof Player
+            && (event.getCause() == EntityDamageEvent.DamageCause.LAVA
+                || event.getCause() == EntityDamageEvent.DamageCause.FIRE
+                || event.getCause()
+                    == EntityDamageEvent.DamageCause.FIRE_TICK)) {
+            if (this.coreListeners.preventEntityCombust(
+                    new PaperEntityContainer(event.getEntity()))) {
+                event.setCancelled(true);
+            }
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onCombustEntityEvent(EntityCombustEvent event) {
+        if (this.coreListeners.preventEntityCombust(
+                new PaperEntityContainer(event.getEntity()))) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onBlockPlace(BlockPlaceEvent event) {
+        if (!event.isCancelled()) {
+            Location blockloc = event.getBlock().getLocation();
+
+            if (blockloc == null || blockloc.getWorld() == null
+                || event.getItemInHand() == null
+                || event.getItemInHand().getItemMeta() == null) {
+                return;
+            }
+
+            if (!this.coreListeners.blockPlace(
+                    new PaperPlayerContainer(event.getPlayer()),
+                    new BlockLocation(
+                        blockloc.getWorld().getName(), blockloc.getBlockX(),
+                        blockloc.getBlockY(), blockloc.getBlockZ()),
+                    event.getBlockPlaced().getType().toString(),
+                    event.getItemInHand().getType().toString(),
+                    SpecialItems.idOf(event.getItemInHand()))) {
+                event.setCancelled(true);
+            }
+        }
+    }
+
+    @EventHandler
+    public void onWorldChangeEvent(PlayerChangedWorldEvent event) {
+        coreListeners.worldChange(new PaperPlayerContainer(event.getPlayer()));
+    }
+
+    @EventHandler
+    public void onItemInteract(PlayerInteractEvent event) {
+        if (event.useInteractedBlock() != Event.Result.DENY
+            && (event.getAction() == Action.LEFT_CLICK_BLOCK
+                || event.getAction() == Action.RIGHT_CLICK_BLOCK)
+            && event.getItem() != null) {
+            if (event.getClickedBlock() == null)
+                return;
+            if (event.getItem().getItemMeta() == null)
+                return;
+
+            Location blockloc = event.getClickedBlock().getLocation();
+
+            if (blockloc.getWorld() == null)
+                return;
+
+            boolean allowEvent = this.coreListeners.playerInteractWithBlock(
+                new PaperPlayerContainer(event.getPlayer()),
+                event.getClickedBlock().getType().toString(),
+                event.getMaterial().toString(),
+                SpecialItems.idOf(event.getItem()),
+                new BlockLocation(blockloc.getWorld().getName(),
+                                  blockloc.getBlockX(), blockloc.getBlockY(),
+                                  blockloc.getBlockZ()),
+                event.getAction() == Action.LEFT_CLICK_BLOCK);
+            if (!allowEvent) {
+                event.setUseInteractedBlock(Event.Result.DENY);
+                event.setUseItemInHand(Event.Result.DENY);
+            }
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void spawnMobEvent(CreatureSpawnEvent event) {
+        if (event.getSpawnReason()
+                == CreatureSpawnEvent.SpawnReason.NETHER_PORTAL
+            && portalServices.inPortalRegionProtected(
+                ContainerHelpers.toPlayerLocation(event.getLocation()))) {
+            event.setCancelled(true);
+        }
+    }
+
+    // Block events
+
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onBlockFromTo(BlockFromToEvent event) {
+        if (!configRepository.getStopWaterFlow()) {
+            return;
+        }
+        if (!coreListeners.blockPlace(null,
+                                      ContainerHelpers.toBlockLocation(
+                                          event.getBlock().getLocation()),
+                                      event.getBlock().getType().toString(),
+                                      null, null)
+            || !coreListeners.blockPlace(null,
+                                         ContainerHelpers.toBlockLocation(
+                                             event.getToBlock().getLocation()),
+                                         event.getBlock().getType().toString(),
+                                         null, null)) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onBlockBreak(BlockBreakEvent event) {
+        ItemStack itemInHand =
+            event.getPlayer().getInventory().getItemInMainHand();
+        if (!coreListeners.blockBreak(
+                new PaperPlayerContainer(event.getPlayer()),
+                ContainerHelpers.toBlockLocation(
+                    event.getBlock().getLocation()),
+                event.getBlock().getType().toString(),
+                itemInHand == null ? null : itemInHand.getType().toString(),
+                SpecialItems.idOf(itemInHand))) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onExplosion(EntityExplodeEvent event) {
+        if (!configRepository.getPortalProtection())
+            return;
+
+        // removeIf is a single pass, the old index based remove was O(n^2) on
+        // big explosions
+        event.blockList().removeIf(
+            block
+            -> portalServices.inPortalRegionProtected(
+                block.getWorld().getName(), block.getX(), block.getY(),
+                block.getZ()));
+    }
+
+    @EventHandler
+    public void onChunkLoad(ChunkLoadEvent event) {
+        if (!configRepository.getDisableGatewayBeam()) {
+            return;
+        }
+        Chunk chunk = event.getChunk();
+        // The index only returns the portals in this exact chunk of this
+        // world, so there is no need to look at every portal on the server
+        // every time a chunk loads.
+        boolean hasGatewayPortal = false;
+        for (AdvancedPortal portal :
+             portalServices.getIndex().inChunkOf(chunk.getWorld().getName(),
+                                                 chunk.getX() << 4,
+                                                 chunk.getZ() << 4)) {
+            if (portal.isTriggerBlock(Material.END_GATEWAY.toString())) {
+                hasGatewayPortal = true;
+                break;
+            }
+        }
+
+        if (!hasGatewayPortal) {
+            return;
+        }
+
+        Arrays.stream(event.getChunk().getTileEntities(false))
+            .filter(blockState -> blockState.getType() == Material.END_GATEWAY)
+            .forEach(endGatewayPortal -> {
+                Location loc = endGatewayPortal.getLocation();
+                if (portalServices.inPortalRegion(
+                        new BlockLocation(loc.getWorld().getName(),
+                                          loc.getBlockX(), loc.getBlockY(),
+                                          loc.getBlockZ()),
+                        2)) {
+                    EndGateway tileState = (EndGateway) endGatewayPortal;
+                    tileState.setAge(Long.MIN_VALUE);
+                    tileState.update();
+                }
+            });
+    }
+}

@@ -19,7 +19,7 @@ import com.velocitypowered.api.proxy.messages.LegacyChannelIdentifier;
 import org.slf4j.Logger;
 
 @Plugin(authors = {"sekwah41"}, id = "advancedportals",
-        name = "Advanced Portals",
+        name = "Portals Pro Max",
         url = "https://www.spigotmc.org/resources/advanced-portals.14356/",
         version = BuildConstants.VERSION)
 public class AdvancedPortalsVelocityPlugin {

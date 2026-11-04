@@ -28,7 +28,13 @@ public class InfoPortalSubCommand implements SubCommand {
             }
             sender.sendMessage(Lang.getPositivePrefix()
                                + Lang.translateInsertVariables(
-                                   "command.portal.info.complete", portalName));
+                                   "command.portal.info.complete",
+                                   portal.getName()));
+            sender.sendMessage(Lang.translateInsertVariables(
+                "command.portal.info.region", portal.getWorldName(),
+                portal.getMinLoc().getPosX(), portal.getMinLoc().getPosY(),
+                portal.getMinLoc().getPosZ(), portal.getMaxLoc().getPosX(),
+                portal.getMaxLoc().getPosY(), portal.getMaxLoc().getPosZ()));
             TagReader.printArgs(sender, portal.getArgs());
         } else {
             sender.sendMessage(Lang.getNegativePrefix()

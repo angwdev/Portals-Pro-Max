@@ -18,28 +18,31 @@ public class MoveDestiSubCommand implements SubCommand {
 
     @Override
     public void onCommand(CommandSenderContainer sender, String[] args) {
-        if (!hasPermission(sender)) {
-            sender.sendMessage(Lang.translate("command.nopermission"));
-            return;
-        }
-        if (!(sender instanceof PlayerContainer)) {
-            sender.sendMessage(Lang.translate("command.playeronly"));
+        // The sender is never a PlayerContainer itself (it is a command
+        // sender), so the old "instanceof" check always failed.
+        PlayerContainer player = sender.getPlayerContainer();
+        if (player == null) {
+            sender.sendMessage(Lang.getNegativePrefix()
+                               + Lang.translate("command.playeronly"));
             return;
         }
         if (args.length < 2) {
-            sender.sendMessage(getBasicHelpText());
+            sender.sendMessage(Lang.getNegativePrefix()
+                               + getBasicHelpText());
             return;
         }
-        String destName = args[1];
-        Destination destination = destinationServices.getDestination(destName);
+        Destination destination = destinationServices.getDestination(args[1]);
         if (destination == null) {
-            sender.sendMessage(Lang.translate("command.destination.notfound"));
+            sender.sendMessage(Lang.getNegativePrefix()
+                               + Lang.translateInsertVariables(
+                                   "command.destination.notfound", args[1]));
             return;
         }
-        PlayerContainer player = (PlayerContainer) sender;
-        destination.setLoc(player.getLoc());
-        destinationServices.changeDestinationLocation(destName, player.getLoc(), player);
-        sender.sendMessage(Lang.translate("command.destination.moved"));
+        // Takes the exact position and the direction the player is facing so
+        // the teleport lands precisely where they stood. The service saves it
+        // and sends the confirmation.
+        destinationServices.changeDestinationLocation(destination.getName(),
+                                                      player.getLoc(), player);
     }
 
     @Override

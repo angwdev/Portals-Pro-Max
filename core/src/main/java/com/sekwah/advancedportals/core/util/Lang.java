@@ -149,13 +149,13 @@ public class Lang {
                 Lang.instance.languageMap.putAll(initialMap);
             } else {
                 this.infoLogger.warning("Could not load " + fileName
-                                        + (".lang from within Advanced Portals "
+                                        + (".lang from within Portals Pro Max "
                                            + "as it doesn't exist."));
             }
         } catch (IOException e) {
             e.printStackTrace();
             this.infoLogger.warning("Could not load " + fileName
-                                    + ".lang from within Advanced Portals.");
+                                    + ".lang from within Portals Pro Max.");
         }
 
         Map<String, String> newLangMap = this.getLanguageMap(fileName);

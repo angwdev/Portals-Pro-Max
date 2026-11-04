@@ -40,8 +40,8 @@ translatedata.replacecommand= Use &e/portal langupdate&c to copy out a new defau
 translatedata.replaced= A new &een_GB&a file has been copied to the data folder.
 translatedata.updated= Lang file reloaded. &e%1$s &atranslations have been added. If you want to reset the file, Please use "&elangupdate overwrite&a".
 
-messageprefix.positive=&a[&eAdvancedPortals&a]
-messageprefix.negative=&c[&7AdvancedPortals&c]
+messageprefix.positive=&a[&ePortalsProMax&a]
+messageprefix.negative=&c[&7PortalsProMax&c]
 
 logger.pluginenable=Advanced portals have been enabled!
 logger.plugindisable=Advanced portals are being disabled!
@@ -56,7 +56,7 @@ command.help.invalidhelp= Sorry but &e%1$s&c is not a valid page number or sub c
 
 command.reload.help=Reloads portal data
 command.reload.detailedhelp=Reloads all portal data from files in the data folder
-command.reload.reloaded= All Advanced Portals data reloaded. Some config values may need a full server restart or a plugin reload to take effect.
+command.reload.reloaded= All Portals Pro Max data reloaded. Some config values may need a full server restart or a plugin reload to take effect.
 
 command.create.help=Creates portals
 command.create.error= There was a problem making the portal.
@@ -232,3 +232,68 @@ tag.proxy.description= Sets the server destination of the portal.
 command.portal.move.help=Moves a portal to your selected region
 command.portal.move.detailedhelp=Usage: /portal move <name> - Moves the specified portal to the region you have selected with your selector tool
 command.portal.move.complete=Moved portal %1$s to your selected region
+
+# Editing portals and destinations
+command.edit.complete= &e%1$s &ahas been updated.
+command.edit.nochange= Nothing was changed.
+command.edit.error.name= The name can't be changed with edit. Use the rename command instead.
+command.edit.error.notset= The tag &e%1$s &cis not set.
+command.edit.error.novalue= The tag &e%1$s &cdoesn't have the value(s) &e%2$s&c.
+command.edit.error.invalidtag= &e%1$s &cis not a tag that can be used here.
+command.edit.error.rejected= The change to the tag &e%1$s &cwas rejected.
+command.edit.error.save= The changes could not be saved so nothing was changed.
+command.portal.edit.usage= Usage: /portal edit <name> [add|remove] <tag:value ...> (without tags it opens the editor on Paper)
+command.portal.edit.help=Changes the tags of an existing portal
+command.portal.edit.detailedhelp=/portal edit <name> tag:value - sets/replaces tags. /portal edit <name> add tag:value - adds values to a multi value tag such as destination. /portal edit <name> remove tag [tag:value] - removes a tag, or only the given values. The name can be changed with /portal rename.
+command.portal.rename.usage= Usage: /portal rename <oldName> <newName>
+command.portal.rename.help=Renames a portal
+command.portal.rename.detailedhelp=Renames a portal and keeps all of its tags and its region.
+command.portal.rename.success= The portal &e%1$s &ahas been renamed to &e%2$s&a.
+command.portal.rename.error= There was a problem renaming the portal.
+command.portal.region.usage= Usage: /portal region <name>
+command.portal.region.help=Loads the region of a portal into your selection
+command.portal.region.detailedhelp=Loads the region of an existing portal into your selection so you can see it with /portal show, adjust the corners with the selector and apply the new region with /portal move <name>.
+command.portal.region.loaded= The region of &e%1$s &ahas been loaded into your selection.
+command.portal.move.usage= Usage: /portal move <name>
+command.portal.info.region= &7Region&8: &e%1$s &7from &e%2$s %3$s %4$s &7to &e%5$s %6$s %7$s
+command.portal.remove.usage= You need to give the name of the portal you want to remove.
+command.portal.remove.help=Removes a portal
+command.portal.remove.detailedhelp=Format is /portal remove (name). Removes the portal and its file.
+command.destination.edit.usage= Usage: /desti edit <name> [add|remove] <tag:value ...> (without tags it opens the editor on Paper)
+command.destination.edit.help=Changes the tags of an existing destination
+command.destination.edit.detailedhelp=/desti edit <name> tag:value - sets/replaces tags. /desti edit <name> add tag:value - adds values to a tag. /desti edit <name> remove tag [tag:value] - removes a tag, or only the given values. Use /desti move to change the location and /desti rename to change the name.
+command.destination.info.help=Shows the location, tags and portals that use a destination
+command.destination.info.complete= Destination information for &e%1$s&a:
+command.destination.info.location= &7Location&8: &e%1$s &7at &e%2$s %3$s %4$s &7(yaw &e%5$s&7, pitch &e%6$s&7)
+command.destination.info.usedby= &7Used by portals&8: &e%1$s
+command.destination.remove.help=Removes a destination
+command.destination.remove.detailedhelp=Format is /desti remove (name). Portals that use the destination will stop working until they are given a new one.
+command.destination.remove.inuse= These portals still use the removed destination: &e%1$s
+command.destination.rename.portals= &e%1$s &aportal(s) that used the old name were updated.
+
+# Keep velocity, editor and highlight
+tag.keepvelocity.description=Keeps the momentum of the player through the warp (true/false). Only on Paper.
+tag.keepvelocity.fail= The keepvelocity tag must be true or false.
+command.edit.gui.unsupported= The click through editor needs Paper 1.21.6 or newer. Use &e/portal edit <name> tag:value &cto edit tags.
+command.edit.gui.title=Editing %1$s
+command.edit.gui.hint=Leave a field empty to remove the tag. Multiple values are separated by commas.
+command.edit.gui.save=Save
+command.edit.gui.cancel=Cancel
+command.edit.gui.gone= The thing you were editing no longer exists.
+command.portal.highlight.usage= Usage: /portal highlight <name> [seconds]
+command.portal.highlight.help=Outlines a portal with a glowing box only you can see
+command.portal.highlight.detailedhelp=/portal highlight <name> [seconds] - shows a glowing outline of the portal region for 10 seconds (max 120). Needs Paper.
+command.portal.highlight.done= Highlighting &e%1$s &afor &e%2$s &aseconds.
+command.portal.highlight.unsupported= Highlighting needs Paper and the portal has to be near you. Use &e/portal show &cinstead.
+command.portal.highlight.toofar= That portal is too far away or in another world.
+command.destination.highlight.usage= Usage: /desti highlight <name> [seconds]
+command.destination.highlight.help=Marks a destination with a glowing box only you can see
+command.destination.highlight.detailedhelp=/desti highlight <name> [seconds] - shows a glowing marker where the destination is for 10 seconds (max 120). Needs Paper.
+command.destination.highlight.done= Highlighting &e%1$s &afor &e%2$s &aseconds.
+command.destination.highlight.unsupported= Highlighting needs Paper and the destination has to be near you. Use &e/desti show &cinstead.
+command.destination.highlight.toofar= That destination is too far away or in another world.
+
+# Selecting without the axe (touch screens, gamepads, Bedrock)
+command.portal.pos.usage= Usage: /portal pos1|pos2 [x y z] (use ~ for your position)
+command.portal.pos.help=Sets a corner of the selection without the axe
+command.portal.pos.detailedhelp=/portal pos1 and /portal pos2 set the corners of your selection to the block you are standing in, or to the given coordinates (~ means your own position, ~5 is 5 blocks away). Useful when clicking blocks with the axe is awkward, for example on Bedrock.

@@ -37,6 +37,12 @@ public interface TagTarget {
      */
     void removeArg(String arg);
 
+    /**
+     * @return a snapshot of every tag (and its values) set on the target
+     */
+    java.util.List<com.sekwah.advancedportals.core.serializeddata.DataTag>
+    getArgs();
+
     String getName();
 
     Tag.TagType targetTagType();

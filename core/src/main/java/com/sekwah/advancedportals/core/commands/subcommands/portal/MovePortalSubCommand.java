@@ -23,7 +23,8 @@ public class MovePortalSubCommand implements SubCommand {
     @Override
     public void onCommand(CommandSenderContainer sender, String[] args) {
         if (args.length < 2) {
-            sender.sendMessage(Lang.getNegativePrefix() + "Usage: /portal move <name>");
+            sender.sendMessage(Lang.getNegativePrefix()
+                               + Lang.translate("command.portal.move.usage"));
             return;
         }
         PlayerContainer player = sender.getPlayerContainer();
@@ -34,14 +35,17 @@ public class MovePortalSubCommand implements SubCommand {
         String portalName = args[1];
         AdvancedPortal portal = portalServices.getPortal(portalName);
         if (portal == null) {
-            sender.sendMessage(Lang.getNegativePrefix() + "Portal not found: " + portalName);
+            sender.sendMessage(Lang.getNegativePrefix()
+                               + Lang.translateInsertVariables(
+                                   "command.portal.info.notfound", portalName));
             return;
         }
         PlayerData tempData = playerDataServices.getPlayerData(player);
         BlockLocation pos1 = tempData.getPos1();
         BlockLocation pos2 = tempData.getPos2();
         if (pos1 == null || pos2 == null) {
-            sender.sendMessage(Lang.translate("portal.error.selection.missing"));
+            sender.sendMessage(Lang.getNegativePrefix()
+                               + Lang.translate("portal.error.selection.missing"));
             return;
         }
 
@@ -53,13 +57,24 @@ public class MovePortalSubCommand implements SubCommand {
             return;
         }
 
-        portal.updateBounds(pos1, pos2);
-        sender.sendMessage(Lang.getPositivePrefix() + Lang.translateInsertVariables("command.portal.move.complete", portalName));
+        // This used to only change the portal in memory, so the new region was
+        // lost on the next restart/reload.
+        if (!portalServices.updatePortalRegion(portal, pos1, pos2)) {
+            sender.sendMessage(Lang.getNegativePrefix()
+                               + Lang.translate("portal.error.save"));
+            return;
+        }
+        sender.sendMessage(Lang.getPositivePrefix()
+                           + Lang.translateInsertVariables(
+                               "command.portal.move.complete",
+                               portal.getName()));
+        player.highlightRegion(portal.getMinLoc(), portal.getMaxLoc(), 100);
     }
 
     @Override
     public boolean hasPermission(CommandSenderContainer sender) {
-        return Permissions.CREATE_PORTAL.hasPermission(sender);
+        return Permissions.EDIT_PORTAL.hasPermission(sender)
+            || Permissions.CREATE_PORTAL.hasPermission(sender);
     }
 
     @Override

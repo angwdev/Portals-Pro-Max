@@ -15,18 +15,26 @@ public class RemovePortalSubCommand implements SubCommand {
     @Override
     public void onCommand(CommandSenderContainer sender, String[] args) {
         if (args.length > 1) {
+            // removePortal already tells the player if the portal is unknown
             if (portalServices.removePortal(args[1],
                                             sender.getPlayerContainer())) {
                 sender.sendMessage(
                     Lang.getPositivePrefix()
                     + Lang.translate("command.portal.remove.complete"));
-            } else {
+            } else if (portalServices.getPortal(args[1]) != null) {
                 sender.sendMessage(
                     Lang.getNegativePrefix()
                     + Lang.translate("command.portal.remove.error"));
+            } else if (sender.getPlayerContainer() == null) {
+                // removePortal can only message players
+                sender.sendMessage(
+                    Lang.getNegativePrefix()
+                    + Lang.translateInsertVariables(
+                        "command.portal.info.notfound", args[1]));
             }
         } else {
-            sender.sendMessage(Lang.translate("command.portal.remove.noname"));
+            sender.sendMessage(Lang.getNegativePrefix()
+                               + Lang.translate("command.portal.remove.usage"));
         }
     }
 
@@ -43,11 +51,11 @@ public class RemovePortalSubCommand implements SubCommand {
 
     @Override
     public String getBasicHelpText() {
-        return Lang.translate("command.create.help");
+        return Lang.translate("command.portal.remove.help");
     }
 
     @Override
     public String getDetailedHelpText() {
-        return Lang.translate("command.create.detailedhelp");
+        return Lang.translate("command.portal.remove.detailedhelp");
     }
 }

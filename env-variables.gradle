@@ -5,7 +5,10 @@ if(branch != null) {
 }
 def isRelease = System.getenv("IS_RELEASE") == "true"
 
-def snapshotName = (branch == null || branch.startsWith("release-please")) ? "SNAPSHOT" : branch
+// Branch names (feature/foo) and pull request refs (pull/12/merge) contain
+// slashes which would end up in the jar file names, so make them file safe.
+def safeBranch = branch == null ? null : branch.replaceAll('[^A-Za-z0-9._-]+', '-')
+def snapshotName = (branch == null || branch.startsWith("release-please")) ? "SNAPSHOT" : safeBranch
 def githubSha = System.getenv("GITHUB_SHA")
 def shaRef = githubSha != null ? "-${githubSha.substring(0, 8)}" : ""
 

@@ -9,7 +9,7 @@ import java.util.List;
 public class VersionSubCommand implements SubCommand {
     @Override
     public void onCommand(CommandSenderContainer sender, String[] args) {
-        sender.sendMessage(Lang.getPositivePrefix() + " Advanced Portals v"
+        sender.sendMessage(Lang.getPositivePrefix() + " Portals Pro Max v"
                            + BuildConstants.VERSION);
     }
 

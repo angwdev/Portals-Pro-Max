@@ -3,9 +3,7 @@ when:
 
 matrix:
   include:
-    - project: "spigot"
-    - project: "legacyspigot"
-    - project: "folia"
+    - project: "paper"
 
 steps:
   - name: snapshot-${project}

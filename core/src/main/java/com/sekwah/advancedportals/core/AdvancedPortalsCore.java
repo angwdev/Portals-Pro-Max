@@ -81,7 +81,7 @@ public class AdvancedPortalsCore {
         this.infoLogger = infoLogger;
 
         int[] mcVersionTemp;
-        infoLogger.info("Loading Advanced Portals Core v"
+        infoLogger.info("Loading Portals Pro Max Core v"
                         + BuildConstants.VERSION + " for MC: " + mcVersion);
         try {
             mcVersionTemp = Arrays.stream(mcVersion.split("\\."))
@@ -147,6 +147,7 @@ public class AdvancedPortalsCore {
         this.tagRegistry.registerTag(new MessageTag());
         this.tagRegistry.registerTag(new BungeeTag());
         this.tagRegistry.registerTag(new ProxyTag());
+        this.tagRegistry.registerTag(new KeepVelocityTag());
     }
 
     /**
@@ -188,6 +189,18 @@ public class AdvancedPortalsCore {
                                               new DisableBeaconSubCommand());
         this.portalCommand.registerSubCommand("move",
                                               new MovePortalSubCommand());
+        this.portalCommand.registerSubCommand("edit",
+                                              new EditPortalSubCommand());
+        this.portalCommand.registerSubCommand("rename",
+                                              new RenamePortalSubCommand());
+        this.portalCommand.registerSubCommand("region",
+                                              new RegionPortalSubCommand());
+        this.portalCommand.registerSubCommand(
+            "pos1", new PositionPortalSubCommand(true));
+        this.portalCommand.registerSubCommand(
+            "pos2", new PositionPortalSubCommand(false));
+        this.portalCommand.registerSubCommand("highlight",
+                                              new HighlightPortalSubCommand());
 
         commandRegister.registerCommand("portal", this.portalCommand);
     }
@@ -205,6 +218,10 @@ public class AdvancedPortalsCore {
         this.destiCommand.registerSubCommand("list", new ListDestiSubCommand());
         this.destiCommand.registerSubCommand("show", new ShowDestiSubCommand());
         this.destiCommand.registerSubCommand("move", new MoveDestiSubCommand());
+        this.destiCommand.registerSubCommand("edit", new EditDestiSubCommand());
+        this.destiCommand.registerSubCommand("info", new InfoDestiSubCommand());
+        this.destiCommand.registerSubCommand("highlight",
+                                             new HighlightDestiSubCommand());
 
         commandRegister.registerCommand("destination", this.destiCommand);
     }

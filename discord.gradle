@@ -46,14 +46,14 @@ task discordupload {
                 def content = "# New release build\n" +
                         "${getReleaseChangelog()}\n"
 
-                def downloadLink = "\n\n[Download here](https://modrinth.com/plugin/advanced-portals)"
+                def downloadLink = "\n\n[Download here](https://modrinth.com/plugin/portals-pro-max)"
 
                 if(isRelease && content.length() + downloadLink.length() <= maxLength) {
                     content += downloadLink
                 }
 
                 if (content.length() + downloadLink.length() > maxLength) {
-                    def afterMessage = "[See more on GitHub](<https://github.com/sekwah41/Advanced-Portals/releases>)\n\n"
+                    def afterMessage = "[See more on GitHub](<https://github.com/angwdev/Portals-Pro-Max/releases>)\n\n"
 
                     def truncatedContent = content.replaceAll(/(http[s]?:\/\/[^\s)]+)/, '<$1>').take(maxLength - afterMessage.length() - 1)
                     def lastFullLine = truncatedContent.lastIndexOf("\n")
